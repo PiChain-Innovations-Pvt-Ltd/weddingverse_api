@@ -1,0 +1,6 @@
+# Add your schema summary content here. E.g.:
+# Collection: Venues
+# Description: Information about venues
+# Fields:
+# - Name (string, Nullable)
+# - City (string, Nullable)

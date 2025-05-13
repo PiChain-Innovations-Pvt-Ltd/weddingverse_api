@@ -1,0 +1,50 @@
+{
+    "wedding_preference": "Indoor",
+    "venue_suits":       "Modern Space",
+    "wedding_style":     "Modern",
+    "wedding_tone":      "Monochrome",
+    "guest_experience":  "Large Gathering",
+    "events":            ["Engagement Party","Sangeet"]
+}
+
+{
+    "wedding_preference": "Outdoor",
+    "venue_suits":       "Beach",
+    "wedding_style":     "Classic",
+    "wedding_tone":      "Monochrome",
+    "guest_experience":  "Large Gathering",
+    "events":            ["Engagement Party","Sangeet"]
+}
+
+
+
+{
+    _id: ObjectId("681b86ee0e0ef15fdd7c37df"),
+    reference_id: '562e7ef3-acf9-4bc8-b1b0-034f8c3c3d54',
+    timestamp: '2025-05-07 21:44:38',
+    request: {
+      wedding_preference: 'Outdoor',
+      venue_suits: 'Beach',
+      wedding_style: 'Classic',
+      wedding_tone: 'Monochrome',
+      guest_experience: 'Large Gathering',
+      events: [ 'Engagement Party', 'Sangeet' ]
+    },
+    title: 'Coastal Classic',
+    summary: 'This vision board embodies a classic and timeless beach wedding, rendered in a sophisticated monochrome palette. The celebration will be a grand affair, filled with loved ones and incorporating pre-wedding festivities like an engagement party and a vibrant Sangeet, creating a memorable and stylish coastal experience.',
+    boards: [
+      {
+        image_link: 'https://storage.googleapis.com/weddingverse-01/image/venue/wedding_bazar/AQUARIUS%20Resort%20%20Lawns/image_1.jpg',
+        image_link: 'https://storage.googleapis.com/weddingverse-01/images/venues/WedMeGood/Askon%20Banquet/image_8.jpg',
+        image_link: 'https://storage.googleapis.com/weddingverse-01/images/venues/WedMeGood/Calcutta%20Boating%20%20Hotel%20Resorts/image_12.jpg'
+        colors: [
+          'gray', 
+          'red',
+          'blue',
+          'green'
+        ]
+      }
+    ],
+    response_type: 'categorization'
+  }
+]
