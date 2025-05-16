@@ -33,6 +33,13 @@ class Settings(BaseSettings):
 
     # Gemini / GenAI
     gemini_api_key:          str = Field(..., env="GEMINI_API_KEY")
+    
+    # API Key (still used by image upload based on original code)
+    api_key:                 str = Field(..., env="API_KEY")
+
+    # JWT Auth
+    jwt_secret_key:          str = Field(..., env="JWT_SECRET_KEY")
+
 
 settings = Settings()
 
