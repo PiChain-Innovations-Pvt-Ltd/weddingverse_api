@@ -1,27 +1,15 @@
-# app/dependencies.py
-from fastapi import Security, HTTPException, status
-from fastapi.security.api_key import APIKeyHeader
-from app.config import settings
 from fastapi import Security, HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
+from app.config import settings
+from fastapi.security.api_key import APIKeyHeader # Still needed for get_api_key
 
 
-
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-
-def get_api_key(api_key: str = Security(api_key_header)):
-    if not api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing API Key",
-        )
-    if api_key != settings.api_key:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid API Key",
-        )
-    return api_key
+from fastapi import HTTPException, status, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt, JWTError
+from app.config import settings
+from app.utils.logger import logger
 
 # JWT Bearer token handling
 security = HTTPBearer()
@@ -37,12 +25,14 @@ def require_jwt_auth(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
         username = payload.get("sub")
         if not username:
+            logger.warning("Missing 'sub' claim in token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",
             )
         return username
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWT Error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",

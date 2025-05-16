@@ -1,8 +1,8 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, status
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
 from typing import List
 from app.services.image_categorization_services import categorize_and_match, categorize_bulk
-from app.dependencies import get_api_key
 from app.utils.logger import logger
+from app.models.vision_board import VisionBoardResponse
 
 router = APIRouter()
 
@@ -12,12 +12,14 @@ router = APIRouter()
     responses={
         200: {"description": "OK"},
         400: {"description": "Bad Request"},
-        401: {"description": "Missing API Key"},
-        403: {"description": "Invalid API Key"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Forbidden"},
         502: {"description": "Upstream service failed"},
         500: {"description": "Internal Server Error"},
     },
-    dependencies=[Depends(get_api_key)]
+    # Remove the explicit API Key dependency here
+    # dependencies=[Depends(get_api_key)],
+    response_model=VisionBoardResponse
 )
 async def categorize_endpoint(
     images:           List[UploadFile] = File(..., description="One or more images"),
@@ -27,6 +29,9 @@ async def categorize_endpoint(
     """
     Upload images, extract metadata via Gemini, match in MongoDB (including
     colors & events), generate a title & summary, and return the results.
+    Returns a single VisionBoardResponse based on either aggregated metadata (bulk)
+    or the first image's metadata (single).
+    Requires JWT authentication.
     """
     if not images:
         raise HTTPException(status_code=400, detail="Provide at least one image file")
@@ -38,29 +43,29 @@ async def categorize_endpoint(
 
         if len(images) > 1:
             # single combined response
-            bulk = await categorize_bulk(
+            bulk_response = await categorize_bulk(
                 upload_bytes_list,
                 content_types,
                 guest_experience,
                 events
             )
-            return bulk
+            return bulk_response
 
-        # Delegate to your service
-        results = categorize_and_match(
+        # Delegate to your service for a single image
+        single_response = await categorize_and_match(
             upload_bytes_list,
             content_types,
             guest_experience,
             events
         )
-        return results
+        return single_response
 
     except HTTPException:
         # Re-raise 400/502 from downstream
         raise
 
     except Exception:
-        logger.error("Unexpected error in /categorize", exc_info=True)
+        logger.error("Unexpected error in /image_upload", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Internal Server Error"
