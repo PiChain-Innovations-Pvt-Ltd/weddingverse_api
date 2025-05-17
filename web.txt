@@ -185,36 +185,31 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
 
     return docs[:limit]  # Ensure we don't return more than requested
 
-def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:     
-    try:         
-        user = req.dict()         
+def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
+    """
+    Create a vision board based on user preferences.
+    
+    Args:
+        req (VisionBoardRequest): User preferences
         
-        # Check if all input values are empty
-        all_empty = (
-            (not user.get("wedding_preference") or user.get("wedding_preference") == "") and
-            (not user.get("venue_suits") or user.get("venue_suits") == "") and
-            (not user.get("wedding_style") or user.get("wedding_style") == "") and
-            (not user.get("wedding_tone") or user.get("wedding_tone") == "") and
-            (not user.get("guest_experience") or user.get("guest_experience") == "") and
-            (not user.get("events") or len(user.get("events", [])) == 0)
-        )
-        
-        if all_empty:
-            logger.warning("Request contains only empty values")
-            raise HTTPException(
-                status_code=400, 
-                detail="No preferences provided. Please specify at least one preference for your vision board."
-            )
+    Returns:
+        Dict[str, Any]: Vision board response
+    """
+    try:
+        # Validate request data
+        if not req:
+            raise HTTPException(status_code=400, detail="Invalid request data")
             
-        # 1) Fetch matching docs         
-        docs = get_matching_boards(user, limit=10)
+        # Convert Pydantic model to dict
+        user = req.dict()
         
-        # Check if no matching documents were found
+        # 1) Fetch matching docs
+        docs = get_matching_boards(user, limit=10)
         if not docs:
             logger.warning("No matching documents found")
-            raise HTTPException(status_code=404, detail="No matching images found for your preferences")
-        
-        # 2) Build BoardItem list (convert Pydantic → dict)
+            raise HTTPException(status_code=404, detail="No matching images found")
+
+        # 2) Build BoardItem list (convert to model with LIST of image_links)
         board_items = []
         for doc in docs:
             if "image_link" in doc and "data" in doc and "Colors" in doc["data"]:
@@ -228,10 +223,10 @@ def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
                     colors=colors
                 ))
         
-        # Check if we couldn't build any board items
+        # If we couldn't build any board items, raise an error
         if not board_items:
             logger.warning("Could not create board items from matched documents")
-            raise HTTPException(status_code=500, detail="Failed to create vision board items from matched images")
+            raise HTTPException(status_code=500, detail="Failed to create vision board items")
         
         # Extract key details from matched images for AI context
         dominant_colors = {}
@@ -270,14 +265,6 @@ def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
         top_colors = sorted(dominant_colors.items(), key=lambda x: x[1], reverse=True)[:4]
         top_color_names = [color for color, _ in top_colors] if top_colors else ["Elegant", "Classic"]
         
-        # Check if we have enough metadata for a meaningful vision board
-        if (not top_color_names or len(top_color_names) == 0) and (not style_elements or len(style_elements) == 0):
-            logger.warning("Insufficient metadata: No colors or style elements found")
-            raise HTTPException(
-                status_code=422, 
-                detail="Unable to create a meaningful vision board due to insufficient image metadata. Please try different preferences."
-            )
-        
         # Format the user preferences to match the expected input structure in the prompt
         formatted_preferences = {}
         
@@ -287,41 +274,34 @@ def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
             "venue_suits": "Venue",
             "wedding_style": "Style",
             "wedding_tone": "Color Palette",
-            "guest_experience": "Atmosphere"
+            "guest_experience": "Atmosphere",
+            "theme": "Theme"
         }
         
-        # Add preferences with validation - only include non-empty values
+        # Add preferences with validation
         for user_key, formatted_key in preference_mapping.items():
-            if user.get(user_key) and user[user_key].strip():  # Only include if value exists and is not just whitespace
-                formatted_preferences[formatted_key] = user[user_key].strip()
+            if user.get(user_key):
+                formatted_preferences[formatted_key] = user[user_key]
         
-        # Handle events separately - only include if there are actual events
+        # Handle events separately
         event_list = []
         if user.get("events"):
             if isinstance(user["events"], list):
                 for event in user["events"]:
-                    if isinstance(event, str) and event.strip():
+                    if isinstance(event, str):
                         if "," in event:
                             event_list.extend([e.strip() for e in event.split(",") if e.strip()])
                         else:
-                            event_list.append(event.strip())
+                            event_list.append(event)
                     elif event:
-                        event_list.append(str(event).strip())
-            elif isinstance(user["events"], str) and user["events"].strip():
+                        event_list.append(event)
+            elif isinstance(user["events"], str):
                 event_list = [e.strip() for e in user["events"].split(",") if e.strip()]
         
         if event_list:
             formatted_preferences["Special Events"] = event_list
         
-        # Check if we have any formatted preferences
-        if not formatted_preferences:
-            logger.warning("No valid formatted preferences generated")
-            raise HTTPException(
-                status_code=400, 
-                detail="Unable to format your preferences. Please provide valid input values."
-            )
-        
-        # 3) Prepare GenAI prompts with exact same prompts from the original code
+        # 3) Prepare enhanced GenAI prompts with more context
         system_prompt = (
             "You are a preeminent wedding vision board creator with extraordinary linguistic sophistication and unrivaled expertise in wedding aesthetics, cultural ceremonies, color psychology, and emotional storytelling. "
             "You craft immaculate, elevated prose that transcends ordinary description, employing refined vocabulary and exquisite phrasing befitting the most distinguished celebrations. "
@@ -334,62 +314,104 @@ def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
             "to create distinctive, memorable, and refined descriptions worthy of the most elegant weddings."
         )
         
-        # Modified user prompt to not request tagline since it's not in the VisionBoardResponse model
+        # Ensure we have all the example field keys that match our formatted_preferences
+        examples = [
+            {
+                "input": {
+                    "Setting": "Outdoor",
+                    "Venue": "Garden",
+                    "Style": "Classic",
+                    "Color Palette": "Pastel",
+                    "Atmosphere": "Large Gathering",
+                    "Special Events": ["Mehendi", "Haldi"]
+                },
+                "output": {
+                    "title": "Garden Romance",
+                    "tagline": "A Classic Outdoor Celebration in Garden Setting",
+                    "summary": "This vision board captures a classic, pastel-toned garden wedding designed for a large gathering. The focus is on creating a romantic outdoor ambiance, with pre-wedding events like Mehendi and Haldi adding cultural richness and joyful celebration to the overall experience."
+                }
+            },
+            {
+                "input": {
+                    "Setting": "Indoor",
+                    "Venue": "Ballroom",
+                    "Style": "Elegant",
+                    "Color Palette": "Gold",
+                    "Atmosphere": "Intimate",
+                    "Special Events": ["Reception", "Sangeet"]
+                },
+                "output": {
+                    "title": "Golden Intimate Elegance",
+                    "tagline": "An Elegant Indoor Celebration in Ballroom Setting",
+                    "summary": "An intimate ballroom celebration bathed in golden warmth, where elegant details create a sophisticated atmosphere. The rich tradition of the Sangeet ceremony blends seamlessly with the refined reception, creating a wedding vision that balances cultural depth with modern luxury."
+                }
+            }
+        ]
+        
+        # Create a user prompt that matches our formatted_preferences structure
         user_prompt = (
-            "Create a vision board title and summary based on these preferences:\n\n"
+            "Create a vision board title, tagline, and summary based on these preferences:\n\n"
             f"PREFERENCES: {json.dumps(formatted_preferences, indent=2)}\n\n"
             f"PROMINENT COLORS IN SELECTED IMAGES: {', '.join(top_color_names)}\n\n"
             f"STYLE ELEMENTS FROM IMAGES: {', '.join(list(style_elements)[:5]) if style_elements else 'None specified'}\n\n"
             "INSTRUCTIONS:\n"
-            "1. IMPORTANT: Only use the preferences that are explicitly provided. If a field is missing or empty, DO NOT make assumptions about it or mention it in your response. Focus only on the preferences that are actually provided.\n\n"
-            "2. FIRST, analyze the deeper meaning behind the couple's provided preferences and how these elements interweave to create a sublime matrimonial narrative.\n\n"
-            "3. TITLE: Craft exactly TWO evocative words that resonate with sophistication and capture the essence of the couple's vision. "
-            "The first word should evoke a color, atmosphere, or emotional quality based on their Color Palette or colors (if provided), "
-            "while the second word should embody their Style or desired atmosphere (if provided). "
+            "1. FIRST, analyze the deeper meaning behind the couple's preferences (Setting, Venue, Style, Color Palette, Atmosphere) and how these elements interweave to create a sublime matrimonial narrative.\n\n"
+            "2. TITLE: Craft exactly TWO evocative words that resonate with sophistication and capture the essence of the couple's vision. "
+            "The first word should evoke a color, atmosphere, or emotional quality based on their Color Palette or colors (like 'Gilded' rather than 'Golden'), "
+            "while the second word should embody their Style or desired atmosphere (like 'Opulence' rather than 'Elegance'). "
             "Aim for unexpected yet fitting pairings that transcend conventional wedding vocabulary.\n\n"
-            "4. SUMMARY: Compose an eloquent paragraph of EXACTLY 42 WORDS that articulates the couple's vision with sophisticated language, including ONLY elements that were provided:\n"
-            "   - If their Setting and Venue were provided, describe how they create a transcendent atmosphere\n"
-            "   - If their Color Palette was provided, describe how it enhances the sensory experience\n"
-            "   - If their Style and planned events were provided, describe how they will manifest memorable moments\n"
+            "3. TAGLINE: Create a brief descriptive phrase of EXACTLY 7 WORDS that follows this structure: "
+            "'A [Style] [Setting] [Event Type] in [Location/Venue]' "
+            "For example: 'A Traditional Outdoor Indian Wedding in Bangalore'\n\n"
+            "4. SUMMARY: Compose an eloquent paragraph of EXACTLY 42 WORDS that articulates the couple's vision with sophisticated language, including:\n"
+            "   - How their Setting and Venue create a transcendent atmosphere, employing metaphorical language rather than direct description\n"
+            "   - How their chosen color palette enhances the sensory experience, using evocative imagery related to their Color Palette\n"
+            "   - How their Style and planned events will manifest memorable moments, with elevated vocabulary and poetic phrasing\n"
             "   - Construct exactly 2 sentences with complex structure and sophisticated rhythm\n"
             "   - Avoid generic phrases like 'this celebration' or 'this theme' - instead, employ more distinguished and specific language\n"
-            "   - Use metaphorical language, elegant compound constructions, and refined vocabulary throughout\n"
-            "   - DO NOT mention or assume details about preferences that were not explicitly provided\n\n"
-            "FORMAT YOUR RESPONSE AS JSON: {\"title\": \"Your Title\", \"summary\": \"Your summary paragraph\"}\n\n"
+            "   - Use metaphorical language, elegant compound constructions, and refined vocabulary throughout\n\n"
+            "FORMAT YOUR RESPONSE AS JSON: {\"title\": \"Your Title\", \"tagline\": \"Your tagline\", \"summary\": \"Your summary paragraph\"}\n\n"
             "EXAMPLES OF EXCELLENT OUTPUTS:\n" + json.dumps([
                 {
                     "input": {
                         "Setting": "Outdoor",
                         "Venue": "Beachfront",
                         "Style": "Contemporary",
-                        "Color Palette": "Blue",
+                        "Color Palette": "Intimate",
                         "Atmosphere": "Immersive Celebration",
                         "Special Events": ["Wedding Ceremony", "Cocktail Hour", "Sunset Reception"]
                     },
                     "output": {
-                        "title": "Azure Serenity",
-                        "summary": "Oceanic vistas embrace contemporary sensibilities where azure tones create an atmosphere of immersive tranquility. Sunset receptions and oceanside ceremonies transform conventional celebrations into a symphony of maritime elegance beneath twilight's tender celestial canopy."
+                        "title": "Coastal Serenity",
+                        "tagline": "A Contemporary Beachfront Wedding in Goa",
+                        "summary": "Oceanic vistas embrace modernist sensibilities along tranquil shores, where intimate moments crystallize into eternal remembrances against horizon's amber canvas. Azure wavelets merge with coral undertones amidst argentate accents, orchestrating a symphony of maritime elegance beneath celestial canopies illuminated by twilight's tender glow."
                     }
                 },
                 {
                     "input": {
                         "Setting": "Indoor",
-                        "Venue": "Heritage Monument",
+                        "Venue": "Heritage Mansion",
                         "Style": "Royal",
-                        "Color Palette": "Burgundy",
-                        "Atmosphere": "Opulent",
-                        "Special Events": ["Sangeet", "Traditional Ceremony"]
+                        "Color Palette": "Opulent",
+                        "Atmosphere": "Regal Indulgence",
+                        "Special Events": ["Sangeet", "Traditional Ceremony", "Grand Reception"]
                     },
                     "output": {
-                        "title": "Burgundy Majesty",
-                        "summary": "Historic stone architecture frames this royal celebration where burgundy tones create an atmosphere of refined opulence. Traditional ceremonies interwoven with spirited Sangeet performances transform conventional elegance into a masterpiece of cultural significance amid architectural splendor."
+                        "title": "Velvet Majesty",
+                        "tagline": "A Royal Heritage Celebration in Jaipur",
+                        "summary": "Ancestral corridors transform into palatial splendor where temporal boundaries dissolve, ushering attendees into realms of aristocratic grandeur and romantic reverie. Burgundy tapestries interwoven with gilded threads cascade among emerald embellishments beneath sculptured ceilings, conjuring a sovereign ambiance honoring dynastic traditions with contemporary magnificence."
                     }
                 }
             ], indent=2)
         )
+
+        # 4) Call the model with enhanced prompts
+        title = ""
+        tagline = ""
+        summary = ""
         
-        # 4) Call the model         
-        try:             
+        try:
+            # Set temperature for creativity but with enough structure for consistency
             resp = model.generate_content(
                 [system_prompt, user_prompt],
                 generation_config={
@@ -398,38 +420,50 @@ def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
                     "top_p": 0.95,
                     "top_k": 40
                 }
-            )            
+            )
             text = resp.text.strip()
+            logger.info(f"Raw GenAI response: {text[:100]}...")
+        except Exception as e:
+            logger.error(f"GenAI call failed: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=502, detail="Failed to generate vision board summary")
+
+        # 5) Improved JSON parsing with better fallbacks
+        try:
+            # Strip markdown code blocks if present
+            if "```" in text:
+                parts = text.split("```")
+                if len(parts) >= 3:
+                    json_text = parts[1]
+                    if json_text.startswith("json"):
+                        json_text = json_text[4:].strip()
+                    else:
+                        json_text = json_text.strip()
+                    text = json_text
             
-            # Check if the model returned an empty response
-            if not text:
-                logger.warning("Empty response from GenAI model")
-                raise HTTPException(status_code=502, detail="Generated content is empty. Please try again.")
-                
-        except Exception as e:             
-            logger.error(f"GenAI call failed: {str(e)}", exc_info=True)             
-            raise HTTPException(status_code=502, detail=f"Failed to generate vision board summary: {str(e)}")          
-        
-        # 5) Parse JSON with minimal parsing approach from simple code        
-        if text.startswith("```") and text.endswith("```"):             
-            lines = text.splitlines()             
-            text = "\n".join([ln for ln in lines if not ln.strip().startswith("```")]).strip()          
-        
-        try:             
-            parsed = json.loads(text)             
-            title = parsed.get("title", "").strip()           
+            # Parse JSON
+            parsed = json.loads(text)
+            title = parsed.get("title", "").strip()
+            tagline = parsed.get("tagline", "").strip()
             summary = parsed.get("summary", "").strip()
             
-            # Validate we have both title and summary
-            if not title or not summary:
-                logger.warning(f"Missing fields in parsed JSON: title={bool(title)}, summary={bool(summary)}")
-                raise ValueError("Missing required fields in generated content")
+            # Validate title
+            if not title or len(title.split()) > 5:
+                raise ValueError("Invalid title format")
                 
-        except Exception as e:             
-            logger.warning(f"JSON parsing failed: {str(e)}. Falling back to text extraction.")
+            # Validate tagline
+            if not tagline:
+                raise ValueError("Missing tagline")
+                
+            # Validate summary
+            if not summary or len(summary) < 20:
+                raise ValueError("Invalid summary")
+                
+        except Exception as e:
+            logger.warning(f"JSON parsing failed: {str(e)}. Falling back to text extraction.", exc_info=True)
             
-            # Try to extract using text parsing as fallback
+            # Extract using text parsing approach
             try:
+                # Extract title, tagline and summary using text parsing
                 lines = [line.strip() for line in text.split("\n") if line.strip()]
                 
                 # Try to find title
@@ -439,6 +473,13 @@ def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
                     if len(title_parts) > 1:
                         title = title_parts[1].strip().strip('"\'{}').strip()
                 
+                # Try to find tagline
+                tagline_line = next((line for line in lines if "tagline" in line.lower() and ":" in line), "")
+                if tagline_line:
+                    tagline_parts = tagline_line.split(":", 1)
+                    if len(tagline_parts) > 1:
+                        tagline = tagline_parts[1].strip().strip('"\'{}').strip()
+                
                 # Try to find summary
                 summary_line = next((line for line in lines if "summary" in line.lower() and ":" in line), "")
                 if summary_line:
@@ -447,55 +488,140 @@ def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
                         summary = summary_parts[1].strip().strip('"\'{}').strip()
                 
                 # If still not found, use longest lines
-                if not title or not summary:
+                if not title or not tagline or not summary:
                     # Sort lines by length for fallbacks
                     sorted_lines = sorted(lines, key=len)
                     
-                    if not title and len(sorted_lines) >= 2:
+                    if not title and len(sorted_lines) >= 3:
                         # Use shortest line for title
                         title = sorted_lines[0]
+                        
+                    if not tagline and len(sorted_lines) >= 3:
+                        # Use medium length line for tagline
+                        middle_index = len(sorted_lines) // 2
+                        tagline = sorted_lines[middle_index]
                         
                     if not summary and len(sorted_lines) >= 1:
                         # Use longest line for summary
                         summary = sorted_lines[-1]
-                        
-                # Final validation
-                if not title or not summary:
-                    raise ValueError("Could not extract title and summary from text")
-                    
             except Exception as extract_err:
                 logger.error(f"Text extraction fallback failed: {str(extract_err)}", exc_info=True)
-                raise HTTPException(
-                    status_code=500, 
-                    detail="Failed to parse the generated content. Please try again with different preferences."
-                )
         
-        # 6) Build output document         
-        ref_id = str(uuid.uuid4())         
-        ist = tz.gettz("Asia/Kolkata")         
-        timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")          
+        # 6) Apply default fallbacks if necessary
+        # Default title fallback
+        if not title:
+            style = formatted_preferences.get("Style", "Elegant")
+            venue = formatted_preferences.get("Venue", "")
+            setting = formatted_preferences.get("Setting", "")
+            color = formatted_preferences.get("Color Palette", "")
+            
+            # Try to create a meaningful title from available fields
+            title_elements = []
+            if color:
+                title_elements.append(color)
+            if style:
+                title_elements.append(style)
+            elif venue:
+                title_elements.append(venue)
+            elif setting:
+                title_elements.append(setting)
+                
+            # If we have elements, use them; otherwise use a default
+            if title_elements:
+                if len(title_elements) == 1:
+                    # Add a second word
+                    additional_words = ["Elegance", "Celebration", "Moments", "Dreams"]
+                    title = f"{title_elements[0]} {additional_words[0]}"
+                else:
+                    # Use the first two elements
+                    title = f"{title_elements[0]} {title_elements[1]}"
+            else:
+                # Use color-based default
+                first_color = top_color_names[0] if top_color_names else "Elegant"
+                title = f"{first_color} Celebration"
+                
+            logger.info(f"Using fallback title: {title}")
         
-        # Create a VisionBoardResponse as per the model
+        # Default tagline fallback
+        if not tagline:
+            style = formatted_preferences.get("Style", "Elegant")
+            setting = formatted_preferences.get("Setting", "")
+            venue = formatted_preferences.get("Venue", "")
+            
+            if style and setting and venue:
+                tagline = f"A {style} {setting} Wedding in {venue}"
+            elif style and setting:
+                tagline = f"A {style} {setting} Wedding Celebration"
+            elif style:
+                tagline = f"A {style} Wedding Celebration"
+            else:
+                tagline = "An Elegant Wedding Celebration"
+                
+            logger.info(f"Using fallback tagline: {tagline}")
+        
+        # Default summary fallback
+        if not summary:
+            elements = []
+            
+            if "Venue" in formatted_preferences and "Setting" in formatted_preferences:
+                elements.append(f"a {formatted_preferences['Setting'].lower()} wedding in a {formatted_preferences['Venue'].lower()} setting")
+            elif "Venue" in formatted_preferences:
+                elements.append(f"a {formatted_preferences['Venue'].lower()} wedding")
+            elif "Setting" in formatted_preferences:
+                elements.append(f"a {formatted_preferences['Setting'].lower()} wedding")
+            
+            if "Style" in formatted_preferences and "Color Palette" in formatted_preferences:
+                elements.append(f"featuring a {formatted_preferences['Style'].lower()} style with a {formatted_preferences['Color Palette'].lower()} color palette")
+            elif "Style" in formatted_preferences:
+                elements.append(f"featuring a {formatted_preferences['Style'].lower()} style")
+            elif "Color Palette" in formatted_preferences:
+                elements.append(f"featuring a {formatted_preferences['Color Palette'].lower()} color palette")
+            
+            if "Atmosphere" in formatted_preferences:
+                elements.append(f"designed for a {formatted_preferences['Atmosphere'].lower()}")
+            
+            if "Special Events" in formatted_preferences and formatted_preferences["Special Events"]:
+                events_list = formatted_preferences["Special Events"]
+                events_text = ", ".join(events_list[:-1]) + (" and " if len(events_list) > 1 else "") + events_list[-1] if events_list else ""
+                if events_text:
+                    elements.append(f"with special celebrations including {events_text}")
+            
+            if elements:
+                summary = "This vision board captures " + ", ".join(elements) + "."
+            else:
+                # Use colors as fallback
+                color_desc = ", ".join(top_color_names[:3]) if top_color_names else "elegant"
+                summary = f"A sophisticated vision board featuring a {color_desc} color palette that perfectly captures the essence of an elegant wedding celebration, designed to inspire and guide the planning process."
+                
+            logger.info(f"Using fallback summary: {summary[:50]}...")
+
+        # 7) Build output document with enhanced metadata
+        ref_id = str(uuid.uuid4())
+        ist = tz.gettz("Asia/Kolkata")
+        timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Create VisionBoardResponse using the models
         output_doc = VisionBoardResponse(
             reference_id=ref_id,
             timestamp=timestamp,
-            request=req,  # Use the original request object
+            request=req,  # Already a VisionBoardRequest
             title=title,
+            tagline=tagline,  # Added tagline to the response
             summary=summary,
-            boards=board_items,  # Use the BoardItem objects directly
+            boards=board_items,
             response_type="vision_board"
         )
-        
-        # 7) Persist and return
+
+        # 8) Persist the response to database
         # Convert to dict for MongoDB storage
         db[OUTPUT_COLLECTION].insert_one(output_doc.dict())
         
-        # Return as dict to match the function return type
+        # 9) Return the response
         return output_doc.dict()
-    
+
     except HTTPException as he:
         # Re-raise HTTP exceptions as they already have proper status codes
         raise he
-    except Exception as e:         
-        logger.error(f"Error in create_vision_board: {str(e)}", exc_info=True)         
+    except Exception as e:
+        logger.error(f"Error in create_vision_board: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal error generating vision board: {str(e)}")
