@@ -1,8 +1,6 @@
 import json
-import uuid
 from datetime import datetime
 from dateutil import tz
-from typing import List, Dict, Any, Optional, Union
 
 from fastapi import HTTPException
 from pymongo import ASCENDING
@@ -11,54 +9,27 @@ from pymongo.errors import OperationFailure
 from app.services.mongo_service import db
 from app.config import settings, FIELD_MAP
 from app.services.genai_service import model
-from app.models.vision_board import Color, BoardItem, VisionBoardRequest, VisionBoardResponse
+from app.models.vision_board import BoardItem, VisionBoardRequest
 from app.utils.logger import logger
 
 IMAGE_INPUT_COLLECTION = settings.image_input_collection
 OUTPUT_COLLECTION = settings.output_collection
 
 def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
-    """
-    Find board images that match user preferences.
-    
-    Args:
-        user (dict): User preferences
-        limit (int): Maximum number of boards to return
-        
-    Returns:
-        list[dict]: Matching board documents
-    """
-    # Identify which fields are provided by the user
     provided = [k for k in FIELD_MAP if user.get(k)]
-    
-    # Process events with improved handling
+    raw_events = user.get("events", []) or []
     events = []
-    if user.get("events"):
-        if isinstance(user["events"], list):
-            for e in user["events"]:
-                if isinstance(e, str):
-                    if "," in e:
-                        events.extend([s.strip() for s in e.split(",") if s.strip()])
-                    else:
-                        events.append(e)
-                elif e:  # Ensure it's not None
-                    events.append(e)
-        elif isinstance(user["events"], str):
-            events.extend([s.strip() for s in user["events"].split(",") if s.strip()])
-    
-    # Process colors with validation
-    colors = []
-    if user.get("colors"):
-        if isinstance(user["colors"], list):
-            colors.extend([c for c in user["colors"] if c])
-        elif isinstance(user["colors"], str):
-            colors.extend([c.strip() for c in user["colors"].split(",") if c.strip()])
-    
-    # Build conditions for MongoDB aggregation
+    for e in raw_events:
+        if isinstance(e, str) and "," in e:
+            events += [s.strip() for s in e.split(",") if s.strip()]
+        else:
+            events.append(e)
+    colors = user.get("colors", []) or []
+
+    # Build conds + keep track of criteria names
     conds = []
     criteria = []
 
-    # Add field conditions
     for key in provided:
         db_field = FIELD_MAP[key]  # e.g. "data.Wedding Preference"
         conds.append({
@@ -66,14 +37,12 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
         })
         criteria.append(("field", key, user[key], db_field))
 
-    # Add event conditions
     for ev in events:
         conds.append({
             "$cond": [{"$in": [ev, "$data.Events"]}, 1, 0]
         })
         criteria.append(("event", ev, None, "data.Events"))
 
-    # Add color conditions
     for clr in colors:
         conds.append({
             "$cond": [{"$in": [clr, "$colorList"]}, 1, 0]
@@ -81,22 +50,13 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
         criteria.append(("color", clr, None, "data.Colors"))
 
     total_fields = len(conds)
-    
-    # If no criteria, return default results
-    if total_fields == 0:
-        logger.warning("No search criteria provided; returning default results")
-        cursor = db[IMAGE_INPUT_COLLECTION] \
-               .find({}, {"_id": 0, "image_link": 1, "data.Colors": 1, "data.Events": 1}) \
-               .sort("_id", ASCENDING).limit(limit)
-        return [{**d, "matchCount": 0} for d in cursor]
 
-    # Build the aggregation pipeline
     pipeline = [
         {
             "$addFields": {
                 "colorList": {
                     "$map": {
-                        "input": {"$ifNull": ["$data.Colors", []]},
+                        "input": "$data.Colors",
                         "as": "c",
                         "in": "$$c.color"
                     }
@@ -108,8 +68,7 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
                 "matchCount": {"$add": conds}
             }
         },
-        {"$sort": {"matchCount": -1, "_id": 1}},  # Added secondary sort for consistency
-        {"$limit": 100},  # Limit results for performance
+        {"$sort": {"matchCount": -1}},
         {
             "$project": {
                 "_id": 0,
@@ -127,375 +86,142 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
         all_docs = list(db[IMAGE_INPUT_COLLECTION]
                         .aggregate(pipeline, allowDiskUse=True))
     except OperationFailure as e:
-        logger.warning(f"Aggregation failed ({str(e)}); falling back to simpler query.")
+        logger.warning("Aggregation failed (%s); falling back.", e)
         cursor = db[IMAGE_INPUT_COLLECTION] \
-                   .find({}, {"_id": 0, "image_link": 1, "data.Colors": 1, "data.Events": 1}) \
+                   .find({}, {"_id": 0, "image_link": 1, "data.Colors": 1}) \
                    .sort("_id", ASCENDING).limit(limit)
         return [{**d, "matchCount": 0} for d in cursor]
 
     docs = []
-    if total_fields > 0 and all_docs:
-        # Find best matching documents by decreasing match count
+    if total_fields > 0:
         for target in range(total_fields, 0, -1):
-            matched = [d for d in all_docs if d.get("matchCount", 0) == target]
+            matched = [d for d in all_docs if d["matchCount"] == target]
             if not matched:
                 continue
 
-            docs = matched[:limit]  # Limit to requested number
-            
-            # Log which criteria matched for the first document
-            if docs:
-                first_link = docs[0].get("image_link")
-                if first_link:
-                    full_doc = db[IMAGE_INPUT_COLLECTION].find_one(
-                        {"image_link": first_link},
-                        {"_id": 0, "data": 1}
-                    )
-                    
-                    if full_doc and "data" in full_doc:
-                        matched_names = []
+            docs = matched
+            first_link = matched[0]["image_link"]
+            full_doc = db[IMAGE_INPUT_COLLECTION].find_one(
+                {"image_link": first_link},
+                {"_id": 0, "data": 1}
+            )["data"]
 
-                        for key in provided:
-                            data_key = FIELD_MAP[key].split(".", 1)[1]
-                            if full_doc["data"].get(data_key) == user[key]:
-                                matched_names.append(f"{key}={user[key]}")
+            matched_names = []
 
-                        for ev in events:
-                            if ev in full_doc["data"].get("Events", []):
-                                matched_names.append(f"event:{ev}")
+            for key in provided:
+                data_key = FIELD_MAP[key].split(".", 1)[1]
+                if full_doc.get(data_key) == user[key]:
+                    matched_names.append(f"{key}={user[key]}")
 
-                        for clr in colors:
-                            color_values = [c.get("color") for c in full_doc["data"].get("Colors", [])]
-                            if clr in color_values:
-                                matched_names.append(f"color:{clr}")
+            for ev in events:
+                if ev in full_doc.get("Events", []):
+                    matched_names.append(f"event:{ev}")
 
-                        logger.info(
-                            f"Matched {len(docs)} docs with {target}/{total_fields} criteria. "
-                            f"Criteria matched: {matched_names}"
-                        )
+            for clr in colors:
+                color_values = [c.get("color") for c in full_doc.get("Colors", [])]
+                if clr in color_values:
+                    matched_names.append(f"color:{clr}")
+
+            logger.info(
+                f"Matched {len(docs)} docs with {target}/{total_fields} criteria. "
+                f"Criteria matched: {matched_names}"
+            )
             break
 
-    # If no matches, return default results
     if not docs:
         logger.warning("No close matches; returning first %d docs.", limit)
         cursor = db[IMAGE_INPUT_COLLECTION] \
-                   .find({}, {"_id": 0, "image_link": 1, "data.Colors": 1, "data.Events": 1}) \
+                   .find({}, {"_id": 0, "image_link": 1, "data.Colors": 1}) \
                    .sort("_id", ASCENDING).limit(limit)
         docs = [{**d, "matchCount": 0} for d in cursor]
 
-    return docs[:limit]  # Ensure we don't return more than requested
+    return docs
 
-def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:     
-    try:         
-        user = req.dict()         
-        
-        # Check if all input values are empty
-        all_empty = (
-            (not user.get("wedding_preference") or user.get("wedding_preference") == "") and
-            (not user.get("venue_suits") or user.get("venue_suits") == "") and
-            (not user.get("wedding_style") or user.get("wedding_style") == "") and
-            (not user.get("wedding_tone") or user.get("wedding_tone") == "") and
-            (not user.get("guest_experience") or user.get("guest_experience") == "") and
-            (not user.get("events") or len(user.get("events", [])) == 0)
-        )
-        
-        if all_empty:
-            logger.warning("Request contains only empty values")
-            raise HTTPException(
-                status_code=400, 
-                detail="No preferences provided. Please specify at least one preference for your vision board."
-            )
-            
-        # 1) Fetch matching docs         
+def create_vision_board(req: VisionBoardRequest) -> dict:
+    try:
+        user = req.dict()
+        # 1) Fetch matching docs
         docs = get_matching_boards(user, limit=10)
-        
-        # Check if no matching documents were found
-        if not docs:
-            logger.warning("No matching documents found")
-            raise HTTPException(status_code=404, detail="No matching images found for your preferences")
-        
-        # 2) Build BoardItem list (convert Pydantic → dict)
-        board_items = []
-        for doc in docs:
-            if "image_link" in doc and "data" in doc and "Colors" in doc["data"]:
-                colors = []
-                for color_obj in doc["data"]["Colors"]:
-                    if isinstance(color_obj, dict) and "color" in color_obj:
-                        colors.append(color_obj["color"])
-                
-                board_items.append(BoardItem(
-                    image_links=[doc["image_link"]],
-                    colors=colors
-                ))
-        
-        # Check if we couldn't build any board items
-        if not board_items:
-            logger.warning("Could not create board items from matched documents")
-            raise HTTPException(status_code=500, detail="Failed to create vision board items from matched images")
-        
-        # Extract key details from matched images for AI context
-        dominant_colors = {}
-        events = set()
-        style_elements = set()
-        
-        for doc in docs:
-            # Extract events from each image
-            if "data" in doc and "Events" in doc["data"]:
-                if isinstance(doc["data"]["Events"], list):
-                    for event in doc["data"]["Events"]:
-                        if event:
-                            events.add(event)
-            
-            # Count color frequencies
-            if "data" in doc and "Colors" in doc["data"]:
-                if isinstance(doc["data"]["Colors"], list):
-                    for color_obj in doc["data"]["Colors"]:
-                        if isinstance(color_obj, dict) and "color" in color_obj:
-                            color = color_obj["color"]
-                            if color:
-                                dominant_colors[color] = dominant_colors.get(color, 0) + 1
-            
-            # Extract venue and style elements if available
-            for field in ["Venue Type", "Style Elements", "Decorations", "Theme"]:
-                if "data" in doc and field in doc["data"]:
-                    data_value = doc["data"][field]
-                    if isinstance(data_value, list):
-                        for item in data_value:
-                            if item:
-                                style_elements.add(item)
-                    elif data_value:
-                        style_elements.add(data_value)
 
-        # Get top colors by frequency
-        top_colors = sorted(dominant_colors.items(), key=lambda x: x[1], reverse=True)[:4]
-        top_color_names = [color for color, _ in top_colors] if top_colors else ["Elegant", "Classic"]
-        
-        # Check if we have enough metadata for a meaningful vision board
-        if (not top_color_names or len(top_color_names) == 0) and (not style_elements or len(style_elements) == 0):
-            logger.warning("Insufficient metadata: No colors or style elements found")
-            raise HTTPException(
-                status_code=422, 
-                detail="Unable to create a meaningful vision board due to insufficient image metadata. Please try different preferences."
-            )
-        
-        # Format the user preferences to match the expected input structure in the prompt
-        formatted_preferences = {}
-        
-        # Mapping between user preferences and formatted preferences
-        preference_mapping = {
-            "wedding_preference": "Setting",
-            "venue_suits": "Venue",
-            "wedding_style": "Style",
-            "wedding_tone": "Color Palette",
-            "guest_experience": "Atmosphere"
+        # collect every image_link
+        image_links = [doc["image_link"] for doc in docs]
+
+        # flatten + dedupe every color
+        color_set = {
+            c["color"]
+            for doc in docs
+            for c in doc["data"]["Colors"]
         }
-        
-        # Add preferences with validation - only include non-empty values
-        for user_key, formatted_key in preference_mapping.items():
-            if user.get(user_key) and user[user_key].strip():  # Only include if value exists and is not just whitespace
-                formatted_preferences[formatted_key] = user[user_key].strip()
-        
-        # Handle events separately - only include if there are actual events
-        event_list = []
-        if user.get("events"):
-            if isinstance(user["events"], list):
-                for event in user["events"]:
-                    if isinstance(event, str) and event.strip():
-                        if "," in event:
-                            event_list.extend([e.strip() for e in event.split(",") if e.strip()])
-                        else:
-                            event_list.append(event.strip())
-                    elif event:
-                        event_list.append(str(event).strip())
-            elif isinstance(user["events"], str) and user["events"].strip():
-                event_list = [e.strip() for e in user["events"].split(",") if e.strip()]
-        
-        if event_list:
-            formatted_preferences["Special Events"] = event_list
-        
-        # Check if we have any formatted preferences
-        if not formatted_preferences:
-            logger.warning("No valid formatted preferences generated")
-            raise HTTPException(
-                status_code=400, 
-                detail="Unable to format your preferences. Please provide valid input values."
+        colors = list(color_set)
+
+        # instantiate one BoardItem
+        board_items = [
+            BoardItem(
+                image_links=image_links,
+                colors=      colors
             )
-        
-        # 3) Prepare GenAI prompts with exact same prompts from the original code
+        ]
+
+        # 3) Prepare GenAI prompts
+        user_input = json.dumps(user, indent=2)
         system_prompt = (
-            "You are a preeminent wedding vision board creator with extraordinary linguistic sophistication and unrivaled expertise in wedding aesthetics, cultural ceremonies, color psychology, and emotional storytelling. "
-            "You craft immaculate, elevated prose that transcends ordinary description, employing refined vocabulary and exquisite phrasing befitting the most distinguished celebrations. "
-            "You transform wedding preferences, venue choices, style elements, color palettes, and planned experiences into meticulously articulated narratives "
-            "that reflect the couple's vision with exceptional eloquence and poetic sensibility. "
-            "Your specialty is creating evocative two-word titles that instantly convey the celebration's essence, "
-            "paired with descriptions that weave together venue characteristics, color symbolism, and emotional atmosphere "
-            "into sophisticated, captivating narratives using elevated language and metaphorical expression. "
-            "You never rely on simple, predictable phrases like 'this celebration' or 'this theme,' instead employing masterful linguistic techniques "
-            "to create distinctive, memorable, and refined descriptions worthy of the most elegant weddings."
+            "You are a specialized AI assistant for processing wedding vision board inputs. "
+            "Your task is to generate precise, evocative titles and concise summaries "
+            "that accurately reflect the provided content. Adherence to all specified "
+            "constraints and output format is mandatory."
         )
-        
-        # Modified user prompt to not request tagline since it's not in the VisionBoardResponse model
+
         user_prompt = (
-            "Create a vision board title and summary based on these preferences:\n\n"
-            f"PREFERENCES: {json.dumps(formatted_preferences, indent=2)}\n\n"
-            f"PROMINENT COLORS IN SELECTED IMAGES: {', '.join(top_color_names)}\n\n"
-            f"STYLE ELEMENTS FROM IMAGES: {', '.join(list(style_elements)[:5]) if style_elements else 'None specified'}\n\n"
-            "INSTRUCTIONS:\n"
-            "1. IMPORTANT: Only use the preferences that are explicitly provided. If a field is missing or empty, DO NOT make assumptions about it or mention it in your response. Focus only on the preferences that are actually provided.\n\n"
-            "2. FIRST, analyze the deeper meaning behind the couple's provided preferences and how these elements interweave to create a sublime matrimonial narrative.\n\n"
-            "3. TITLE: Craft exactly TWO evocative words that resonate with sophistication and capture the essence of the couple's vision. "
-            "The first word should evoke a color, atmosphere, or emotional quality based on their Color Palette or colors (if provided), "
-            "while the second word should embody their Style or desired atmosphere (if provided). "
-            "Aim for unexpected yet fitting pairings that transcend conventional wedding vocabulary.\n\n"
-            "4. SUMMARY: Compose an eloquent paragraph of EXACTLY 42 WORDS that articulates the couple's vision with sophisticated language, including ONLY elements that were provided:\n"
-            "   - If their Setting and Venue were provided, describe how they create a transcendent atmosphere\n"
-            "   - If their Color Palette was provided, describe how it enhances the sensory experience\n"
-            "   - If their Style and planned events were provided, describe how they will manifest memorable moments\n"
-            "   - Construct exactly 2 sentences with complex structure and sophisticated rhythm\n"
-            "   - Avoid generic phrases like 'this celebration' or 'this theme' - instead, employ more distinguished and specific language\n"
-            "   - Use metaphorical language, elegant compound constructions, and refined vocabulary throughout\n"
-            "   - DO NOT mention or assume details about preferences that were not explicitly provided\n\n"
-            "FORMAT YOUR RESPONSE AS JSON: {\"title\": \"Your Title\", \"summary\": \"Your summary paragraph\"}\n\n"
-            "EXAMPLES OF EXCELLENT OUTPUTS:\n" + json.dumps([
-                {
-                    "input": {
-                        "Setting": "Outdoor",
-                        "Venue": "Beachfront",
-                        "Style": "Contemporary",
-                        "Color Palette": "Blue",
-                        "Atmosphere": "Immersive Celebration",
-                        "Special Events": ["Wedding Ceremony", "Cocktail Hour", "Sunset Reception"]
-                    },
-                    "output": {
-                        "title": "Azure Serenity",
-                        "summary": "Oceanic vistas embrace contemporary sensibilities where azure tones create an atmosphere of immersive tranquility. Sunset receptions and oceanside ceremonies transform conventional celebrations into a symphony of maritime elegance beneath twilight's tender celestial canopy."
-                    }
-                },
-                {
-                    "input": {
-                        "Setting": "Indoor",
-                        "Venue": "Heritage Monument",
-                        "Style": "Royal",
-                        "Color Palette": "Burgundy",
-                        "Atmosphere": "Opulent",
-                        "Special Events": ["Sangeet", "Traditional Ceremony"]
-                    },
-                    "output": {
-                        "title": "Burgundy Majesty",
-                        "summary": "Historic stone architecture frames this royal celebration where burgundy tones create an atmosphere of refined opulence. Traditional ceremonies interwoven with spirited Sangeet performances transform conventional elegance into a masterpiece of cultural significance amid architectural splendor."
-                    }
-                }
-            ], indent=2)
+            f"Analyze the following wedding vision board content: {user_input}\n\n"
+            "Based on this analysis, provide the following:\n"
+            "1. A professional and expressive title, strictly limited to a maximum of two words.\n"
+            "2. A single-paragraph summary that clearly and concisely encapsulates the primary theme and aesthetic of the vision board.\n\n"
+            "Output the response exclusively as a valid JSON object containing two keys: 'title' and 'summary'."
         )
-        
-        # 4) Call the model         
-        try:             
-            resp = model.generate_content(
-                [system_prompt, user_prompt],
-                generation_config={
-                    "temperature": 0.6,
-                    "max_output_tokens": 300,
-                    "top_p": 0.95,
-                    "top_k": 40
-                }
-            )            
+
+        # 4) Call the model
+        try:
+            resp = model.generate_content([system_prompt, user_prompt])
             text = resp.text.strip()
-            
-            # Check if the model returned an empty response
-            if not text:
-                logger.warning("Empty response from GenAI model")
-                raise HTTPException(status_code=502, detail="Generated content is empty. Please try again.")
-                
-        except Exception as e:             
-            logger.error(f"GenAI call failed: {str(e)}", exc_info=True)             
-            raise HTTPException(status_code=502, detail=f"Failed to generate vision board summary: {str(e)}")          
-        
-        # 5) Parse JSON with minimal parsing approach from simple code        
-        if text.startswith("```") and text.endswith("```"):             
-            lines = text.splitlines()             
-            text = "\n".join([ln for ln in lines if not ln.strip().startswith("```")]).strip()          
-        
-        try:             
-            parsed = json.loads(text)             
-            title = parsed.get("title", "").strip()           
+        except Exception:
+            logger.error("GenAI call failed", exc_info=True)
+            raise HTTPException(status_code=502, detail="Failed to generate vision board summary")
+
+        # 5) Strip code fences and parse JSON
+        if text.startswith("```") and text.endswith("```"):
+            lines = text.splitlines()
+            text = "\n".join([ln for ln in lines if not ln.strip().startswith("```")]).strip()
+
+        try:
+            parsed = json.loads(text)
+            title = parsed.get("title", "").strip()
             summary = parsed.get("summary", "").strip()
-            
-            # Validate we have both title and summary
-            if not title or not summary:
-                logger.warning(f"Missing fields in parsed JSON: title={bool(title)}, summary={bool(summary)}")
-                raise ValueError("Missing required fields in generated content")
-                
-        except Exception as e:             
-            logger.warning(f"JSON parsing failed: {str(e)}. Falling back to text extraction.")
-            
-            # Try to extract using text parsing as fallback
-            try:
-                lines = [line.strip() for line in text.split("\n") if line.strip()]
-                
-                # Try to find title
-                title_line = next((line for line in lines if "title" in line.lower() and ":" in line), "")
-                if title_line:
-                    title_parts = title_line.split(":", 1)
-                    if len(title_parts) > 1:
-                        title = title_parts[1].strip().strip('"\'{}').strip()
-                
-                # Try to find summary
-                summary_line = next((line for line in lines if "summary" in line.lower() and ":" in line), "")
-                if summary_line:
-                    summary_parts = summary_line.split(":", 1)
-                    if len(summary_parts) > 1:
-                        summary = summary_parts[1].strip().strip('"\'{}').strip()
-                
-                # If still not found, use longest lines
-                if not title or not summary:
-                    # Sort lines by length for fallbacks
-                    sorted_lines = sorted(lines, key=len)
-                    
-                    if not title and len(sorted_lines) >= 2:
-                        # Use shortest line for title
-                        title = sorted_lines[0]
-                        
-                    if not summary and len(sorted_lines) >= 1:
-                        # Use longest line for summary
-                        summary = sorted_lines[-1]
-                        
-                # Final validation
-                if not title or not summary:
-                    raise ValueError("Could not extract title and summary from text")
-                    
-            except Exception as extract_err:
-                logger.error(f"Text extraction fallback failed: {str(extract_err)}", exc_info=True)
-                raise HTTPException(
-                    status_code=500, 
-                    detail="Failed to parse the generated content. Please try again with different preferences."
-                )
-        
-        # 6) Build output document         
-        ref_id = str(uuid.uuid4())         
-        ist = tz.gettz("Asia/Kolkata")         
-        timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")          
-        
-        # Create a VisionBoardResponse as per the model
-        output_doc = VisionBoardResponse(
-            reference_id=ref_id,
-            timestamp=timestamp,
-            request=req,  # Use the original request object
-            title=title,
-            summary=summary,
-            boards=board_items,  # Use the BoardItem objects directly
-            response_type="vision_board"
-        )
-        
+        except json.JSONDecodeError:
+            parts = text.split("\n", 1)
+            title = parts[0].strip()
+            summary = parts[1].strip() if len(parts) > 1 else ""
+
+        # 6) Build output document
+        ref_id = req.reference_id
+        ist = tz.gettz("Asia/Kolkata")
+        timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+
+        output_doc = {
+            "reference_id": ref_id,
+            "timestamp": timestamp,
+            "request": user,
+            "title": title,
+            "summary": summary,
+            "boards": [b.dict() for b in board_items],
+            "response_type": "vision_board"
+        }
+
         # 7) Persist and return
-        # Convert to dict for MongoDB storage
-        db[OUTPUT_COLLECTION].insert_one(output_doc.dict())
-        
-        # Return as dict to match the function return type
-        return output_doc.dict()
-    
-    except HTTPException as he:
-        # Re-raise HTTP exceptions as they already have proper status codes
-        raise he
-    except Exception as e:         
-        logger.error(f"Error in create_vision_board: {str(e)}", exc_info=True)         
-        raise HTTPException(status_code=500, detail=f"Internal error generating vision board: {str(e)}")
+        db[OUTPUT_COLLECTION].insert_one(output_doc)
+        return output_doc
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error("Error in create_vision_board", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal error generating vision board")

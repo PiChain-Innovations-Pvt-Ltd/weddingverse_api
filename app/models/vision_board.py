@@ -8,6 +8,7 @@ class VisionBoardRequest(BaseModel):
     wedding_tone:      Optional[str]
     guest_experience:  Optional[str]
     events:            Optional[List[str]] = []
+    reference_id:      str
 
 class Color(BaseModel):
     color:       str

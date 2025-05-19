@@ -25,16 +25,14 @@ async def categorize_endpoint(
     images:           List[UploadFile] = File(..., description="One or more images"),
     guest_experience: str              = Form(..., description="Guest experience"),
     events:           List[str]        = Form(default=[], description="Events list"),
+    reference_id:     str              = Form(..., description="User reference_id") 
 ):
-    """
-    Upload images, extract metadata via Gemini, match in MongoDB (including
-    colors & events), generate a title & summary, and return the results.
-    Returns a single VisionBoardResponse based on either aggregated metadata (bulk)
-    or the first image's metadata (single).
-    Requires JWT authentication.
-    """
+
     if not images:
         raise HTTPException(status_code=400, detail="Provide at least one image file")
+    
+    if not reference_id:
+        raise HTTPException(status_code=400, detail="please provide the reference_id")
 
     try:
         # Read all uploaded files
@@ -47,7 +45,8 @@ async def categorize_endpoint(
                 upload_bytes_list,
                 content_types,
                 guest_experience,
-                events
+                events,
+                reference_id
             )
             return bulk_response
 
@@ -56,7 +55,8 @@ async def categorize_endpoint(
             upload_bytes_list,
             content_types,
             guest_experience,
-            events
+            events,
+            reference_id
         )
         return single_response
 

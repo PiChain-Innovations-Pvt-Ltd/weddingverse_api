@@ -48,3 +48,56 @@
     response_type: 'categorization'
   }
 ]
+
+
+
+{
+  "reference_id": "7008651009",
+  "timestamp": "2025-05-19 16:28:25",
+  "request": {
+    "wedding_preference": "Outdoor",
+    "venue_suits": "Beach",
+    "wedding_style": "Classic",
+    "wedding_tone": "Monochrome",
+    "guest_experience": "Large Gathering",
+    "events": [
+      "Engagement Party"
+    ],
+    "reference_id": "7008651009"
+  },
+  "title": "Coastal Classic",
+  "summary": "This vision board envisions a classic, monochrome wedding on a beach setting, emphasizing a large gathering for the guest experience and including an engagement party. The overall aesthetic is sophisticated and timeless, harmonizing with the natural beauty of the coastal venue.",
+  "boards": [
+    {
+      "image_links": [
+        "https://storage.googleapis.com/weddingverse-01/image/venue/wedding_bazar/AQUARIUS%20Resort%20%20Lawns/image_1.jpg"
+      ],
+      "colors": [
+        "gray",
+        "red",
+        "blue",
+        "green"
+      ]
+    },
+    {
+      "image_links": [
+        "https://storage.googleapis.com/weddingverse-01/image/venue/wedding_bazar/Golden%20Bay%20Resorts/image_2.jpg"
+      ],
+      "colors": [
+        "gray",
+        "green"
+      ]
+    },
+    {
+      "image_links": [
+        "https://storage.googleapis.com/weddingverse-01/image/venue/wedding_bazar/Golden%20Bay%20Resorts/image_3.jpg"
+      ],
+      "colors": [
+        "gray",
+        "green",
+        "white"
+      ]
+    }
+  ],
+  "response_type": "vision_board"
+}

@@ -12,11 +12,10 @@ router = APIRouter()
     summary="Create a wedding vision board"
 )
 def vision_board_endpoint(req: VisionBoardRequest):
+    if not req.reference_id:
+        raise HTTPException(status_code=400, detail="please provide the reference_id")
     try:
         return create_vision_board(req)
-    except HTTPException as he:
-        # Re-raise HTTP exceptions to maintain the correct status code
-        raise he
     except Exception as e:
-        logger.error(f"Error in /vision-board: {str(e)}", exc_info=True)
+        logger.error(f"Error in Vision‑Board endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
