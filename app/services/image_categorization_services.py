@@ -2,7 +2,6 @@ import json
 import re
 import mimetypes
 import requests
-import uuid
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -12,8 +11,8 @@ from urllib.parse import urlparse
 import google.generativeai as genai
 from fastapi import HTTPException
 
-from app.services.vision_board_service import get_matching_boards, create_vision_board
-from app.models.vision_board import Color, BoardItem, VisionBoardRequest, VisionBoardResponse
+from app.services.vision_board_service import get_matching_boards
+from app.models.vision_board import VisionBoardRequest, VisionBoardResponse
 from app.config import settings
 from app.services.mongo_service import db
 from app.utils.logger import logger
@@ -172,14 +171,14 @@ def _clean_metadata(raw: Dict[str, Any]) -> Dict[str, Any]:
     return cleaned
 
 
-def categorize_and_match(
+async def categorize_and_match(
     upload_bytes_list: List[bytes],
     content_types:    List[str],
     guest_experience: str,
     events:           List[str],
+    reference_id:     str,
     limit:            int = 10
 ) -> List[Dict[str, Any]]:
-    results: List[Dict[str, Any]] = []
 
     for img_bytes, content_type in zip(upload_bytes_list, content_types):
         try:
@@ -202,6 +201,7 @@ def categorize_and_match(
 
             # Prepare prompts
             vb_req = VisionBoardRequest(
+                reference_id=      reference_id,
                 wedding_preference=cleaned["wedding_preference"],
                 venue_suits=       cleaned["venue_suits"],
                 wedding_style=     cleaned["wedding_style"],
@@ -210,15 +210,19 @@ def categorize_and_match(
                 events=            cleaned["events"],
             )
             user_input   = json.dumps(vb_req.dict(), indent=2)
-            system_prompt= (
-                "You are a helpful assistant that crafts an evocative title "
-                "and concise summary for a wedding vision board.\n"
+            system_prompt = (
+            "You are a specialized AI assistant for processing wedding vision board inputs. "
+            "Your task is to generate precise, evocative titles and concise summaries "
+            "that accurately reflect the provided content. Adherence to all specified "
+            "constraints and output format is mandatory."
             )
+
             user_prompt = (
-                "Generate a short, expressive title (max 2 words) and a one-paragraph "
-                "summary for this wedding vision board selection. "
-                "Return output as JSON with keys 'title' and 'summary'.\n"
-                f"Input: {user_input}"
+                f"Analyze the following wedding vision board content: {user_input}\n\n"
+                "Based on this analysis, provide the following:\n"
+                "1. A professional and expressive title, strictly limited to a maximum of two words.\n"
+                "2. A single-paragraph summary that clearly and concisely encapsulates the primary theme and aesthetic of the vision board.\n\n"
+                "Output the response exclusively as a valid JSON object containing two keys: 'title' and 'summary'."
             )
 
             # Call Gemini
@@ -243,12 +247,11 @@ def categorize_and_match(
                 summary = parts[1].strip() if len(parts)>1 else ""
 
             # Build output
-            ref_id   = str(uuid.uuid4())
             ist      = tz.gettz("Asia/Kolkata")
             timestamp= datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
             output = VisionBoardResponse(
-                reference_id=ref_id,
+                reference_id=reference_id,
                 timestamp=   timestamp,
                 request=     vb_req,
                 title=       title,
@@ -259,16 +262,13 @@ def categorize_and_match(
 
             db[OUTPUT_COLLECTION].insert_one(output)
             output.pop("_id", None)
-            results.append(output)
 
         except HTTPException as he:
             logger.warning("Image skipped: %s", he.detail)
-            results.append({"error": he.detail})
         except Exception:
             logger.error("Error processing image", exc_info=True)
-            results.append({"error":"Internal error"})
 
-    return results
+    return output
 
 
 async def categorize_bulk(
@@ -276,6 +276,7 @@ async def categorize_bulk(
     content_types:    List[str],
     guest_experience: str,
     events:           List[str],
+    reference_id:     str,
     limit:            int = 10
 ) -> Dict[str, Any]:
 
@@ -366,6 +367,7 @@ async def categorize_bulk(
     ]
 
     vb_req = VisionBoardRequest(
+        reference_id=      reference_id,
         wedding_preference=cleaned["wedding_preference"],
         venue_suits=       cleaned["venue_suits"],
         wedding_style=     cleaned["wedding_style"],
@@ -375,14 +377,19 @@ async def categorize_bulk(
     )
     # build vision‐board title/summary once
     user_input   = json.dumps(vb_req.dict(), indent=2)
-    system_prompt= (
-        "You are a helpful assistant that crafts an evocative title and "
-        "concise summary for a wedding vision board.\n"
+    system_prompt = (
+    "You are a specialized AI assistant for processing wedding vision board inputs. "
+    "Your task is to generate precise, evocative titles and concise summaries "
+    "that accurately reflect the provided content. Adherence to all specified "
+    "constraints and output format is mandatory."
     )
+
     user_prompt = (
-        "Generate a short, expressive title (max 2 words) and a one-paragraph summary "
-        "for this wedding vision board selection. Return JSON with 'title','summary'.\n"
-        f"Input: {user_input}"
+        f"Analyze the following wedding vision board content: {user_input}\n\n"
+        "Based on this analysis, provide the following:\n"
+        "1. A professional and expressive title, strictly limited to a maximum of two words.\n"
+        "2. A single-paragraph summary that clearly and concisely encapsulates the primary theme and aesthetic of the vision board.\n\n"
+        "Output the response exclusively as a valid JSON object containing two keys: 'title' and 'summary'."
     )
     try:
         resp = model.generate_content([system_prompt, user_prompt])
@@ -404,12 +411,11 @@ async def categorize_bulk(
         summary = parts[1].strip() if len(parts)>1 else ""
 
     # 6) Build and persist a single output
-    ref_id    = str(uuid.uuid4())
     ist       = tz.gettz("Asia/Kolkata")
     timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
     output = VisionBoardResponse(
-        reference_id= ref_id,
+        reference_id= reference_id,
         timestamp=    timestamp,
         request=      vb_req,
         title=        title,
@@ -418,7 +424,7 @@ async def categorize_bulk(
         response_type="categorization"
     ).dict()
     # persist & strip _id
-    db[settings.output_collection].insert_one(output)
+    db[OUTPUT_COLLECTION].insert_one(output)
     output.pop("_id", None)
 
     return output
