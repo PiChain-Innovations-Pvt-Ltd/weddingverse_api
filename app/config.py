@@ -1,22 +1,20 @@
-from pathlib import Path
-from dotenv import load_dotenv
 
-# Explicitly load the root .env, stripping comments
-load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=True)
+# app/config.py
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 class Settings(BaseSettings):
-
+    """
+    All config is loaded from environment / .env.
+    No defaults are hard-coded here.
+    """
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False
     )
 
-    # auth & environment
-    api_key:                 str = Field(..., env="API_KEY")
+    # environment
     env:                     str = Field(..., env="ENV")  # local|dev|prod
     base_url_local:          str = Field(..., env="BASE_URL_LOCAL")
     base_url_dev:            str = Field(..., env="BASE_URL_DEV")
@@ -34,8 +32,10 @@ class Settings(BaseSettings):
     # Gemini / GenAI
     gemini_api_key:          str = Field(..., env="GEMINI_API_KEY")
 
-settings = Settings()
+    # JWT Auth
+    jwt_secret_key:          str = Field(..., env="JWT_SECRET_KEY")
 
+settings = Settings()
 
 # Static field‐mapping for your vision‐board queries
 FIELD_MAP = {
