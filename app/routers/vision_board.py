@@ -1,6 +1,5 @@
-# app/routers/vision_board.py
-
 from fastapi import APIRouter, HTTPException
+from typing import Dict, Any
 from app.models.vision_board import VisionBoardRequest, VisionBoardResponse
 from app.services.vision_board_service import create_vision_board
 from app.utils.logger import logger
@@ -15,6 +14,9 @@ router = APIRouter()
 def vision_board_endpoint(req: VisionBoardRequest):
     try:
         return create_vision_board(req)
+    except HTTPException as he:
+        # Re-raise HTTP exceptions to maintain the correct status code
+        raise he
     except Exception as e:
-        logger.error("Error in /vision-board", exc_info=True)
+        logger.error(f"Error in /vision-board: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
