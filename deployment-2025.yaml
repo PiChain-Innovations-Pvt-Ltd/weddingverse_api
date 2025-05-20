@@ -22,9 +22,6 @@ spec:
         image: asia-south1-docker.pkg.dev/ken-cloud-436408/weddinverse-api/dev:latest
         ports:
         - containerPort: 5000
-        envFrom:
-          - secretRef:
-              name: weddinverse-api-dev
 ---
 apiVersion: v1
 kind: Service
