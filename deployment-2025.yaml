@@ -21,7 +21,7 @@ spec:
       - name: weddinverse-api-dev
         image: asia-south1-docker.pkg.dev/ken-cloud-436408/weddinverse-api/dev:latest
         ports:
-        - containerPort: 4000
+        - containerPort: 5000
         envFrom:
           - secretRef:
               name: weddinverse-api-dev
@@ -36,8 +36,8 @@ spec:
   ports:
     - name: api
       protocol: TCP
-      port: 4000
-      targetPort: 4000
+      port: 5000
+      targetPort: 5000
   selector:
     app: weddinverse-api-dev
   type: LoadBalancer
