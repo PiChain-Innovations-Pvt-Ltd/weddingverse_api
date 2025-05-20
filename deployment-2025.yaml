@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: weddinverse-api-dev
-        image: asia-south1-docker.pkg.dev/ken-cloud-436408/weddinverse/node-dev:latest
+        image: asia-south1-docker.pkg.dev/ken-cloud-436408/weddinverse-api/dev:latest
         ports:
         - containerPort: 4000
         envFrom:
