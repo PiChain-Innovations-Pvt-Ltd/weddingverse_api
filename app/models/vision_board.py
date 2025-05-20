@@ -21,7 +21,6 @@ class BoardItem(BaseModel):
 class VisionBoardResponse(BaseModel):
     reference_id: str
     timestamp:    str
-    request:      VisionBoardRequest
     title:        Optional[str]
     summary:      Optional[str]
     boards:       List[BoardItem]
