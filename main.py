@@ -1,6 +1,7 @@
 import uvicorn
 from fastapi import FastAPI, Depends, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.utils.logger import logger
 from app.routers import vision_board, chat, image_categorization, auth
 from app.dependencies import require_jwt_auth
@@ -13,6 +14,15 @@ root_path = getattr(settings, base_url_attr, "").rstrip("/")
 app = FastAPI(
     title="WeddingVerse API",
     root_path=root_path
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # replace with your actual client origin(s)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 logger.info(f"Starting WeddingVerse API under ENV={settings.env} at root_path={root_path}")
