@@ -1,4 +1,3 @@
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,10 +17,10 @@ spec:
         app: weddinverse-api-dev
     spec:
       containers:
-      - name: weddinverse-api-dev
-        image: asia-south1-docker.pkg.dev/ken-cloud-436408/weddinverse-api/dev:latest
-        ports:
-        - containerPort: 5000
+        - name: weddinverse-api-dev
+          image: asia-south1-docker.pkg.dev/ken-cloud-436408/weddinverse-api/dev:latest
+          ports:
+            - containerPort: 8000
 ---
 apiVersion: v1
 kind: Service
@@ -31,10 +30,10 @@ metadata:
     app: weddinverse-api-dev
 spec:
   ports:
-    - name: api
+    - name: http
       protocol: TCP
-      port: 5000
-      targetPort: 5000
+      port: 8000
+      targetPort: 8000
   selector:
     app: weddinverse-api-dev
   type: LoadBalancer
