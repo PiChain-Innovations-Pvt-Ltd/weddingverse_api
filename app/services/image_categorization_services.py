@@ -18,7 +18,7 @@ from app.services.mongo_service import db
 from app.utils.logger import logger
 
 GEMINI_API_KEY = settings.gemini_api_key
-OUTPUT_COLLECTION = settings.output_collection
+VISION_BOARD_COLLECTION = settings.VISION_BOARD_COLLECTION
 
 # ─── Gemini setup ───────────────────────────────────────────────────────────────
 genai.configure(api_key=GEMINI_API_KEY)
@@ -260,7 +260,7 @@ async def categorize_and_match(
                 response_type="categorization"
             ).dict()
 
-            db[OUTPUT_COLLECTION].insert_one(output)
+            db[VISION_BOARD_COLLECTION].insert_one(output)
             output.pop("_id", None)
 
         except HTTPException as he:
@@ -424,7 +424,7 @@ async def categorize_bulk(
         response_type="categorization"
     ).dict()
     # persist & strip _id
-    db[OUTPUT_COLLECTION].insert_one(output)
+    db[VISION_BOARD_COLLECTION].insert_one(output)
     output.pop("_id", None)
 
     return output

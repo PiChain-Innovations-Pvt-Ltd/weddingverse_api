@@ -13,7 +13,7 @@ from app.models.vision_board import BoardItem, VisionBoardRequest
 from app.utils.logger import logger
 
 IMAGE_INPUT_COLLECTION = settings.image_input_collection
-OUTPUT_COLLECTION = settings.output_collection
+VISION_BOARD_COLLECTION = settings.VISION_BOARD_COLLECTION
 
 def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
     provided = [k for k in FIELD_MAP if user.get(k)]
@@ -287,7 +287,7 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
         }
 
         # 7) Persist and return
-        db[OUTPUT_COLLECTION].insert_one(output_doc)
+        db[VISION_BOARD_COLLECTION].insert_one(output_doc)
         return output_doc
 
     except HTTPException:

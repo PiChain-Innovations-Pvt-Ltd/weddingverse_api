@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     mongo_uri:               str = Field(..., env="MONGO_URI")
     database_name:           str = Field(..., env="DATABASE_NAME")
     image_input_collection:  str = Field(..., env="IMAGE_INPUT_COLLECTION")
-    output_collection:       str = Field(..., env="OUTPUT_COLLECTION")
+    VISION_BOARD_COLLECTION:       str = Field(..., env="VISION_BOARD_COLLECTION")
 
     # Schema directory (if used elsewhere)
     schema_dir:              str = Field(..., env="SCHEMA_DIR")

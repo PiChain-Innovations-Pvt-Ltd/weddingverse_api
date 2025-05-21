@@ -15,7 +15,7 @@ from app.models.vision_board import Color, BoardItem, VisionBoardRequest, Vision
 from app.utils.logger import logger
 
 IMAGE_INPUT_COLLECTION = settings.image_input_collection
-OUTPUT_COLLECTION = settings.output_collection
+VISION_BOARD_COLLECTION = settings.VISION_BOARD_COLLECTION
 
 def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
     """
@@ -614,7 +614,7 @@ def create_vision_board(req: VisionBoardRequest) -> Dict[str, Any]:
 
         # 8) Persist the response to database
         # Convert to dict for MongoDB storage
-        db[OUTPUT_COLLECTION].insert_one(output_doc.dict())
+        db[VISION_BOARD_COLLECTION].insert_one(output_doc.dict())
         
         # 9) Return the response
         return output_doc.dict()
