@@ -21,6 +21,7 @@ def vision_board_endpoint(req: VisionBoardRequest):
         raise HTTPException(status_code=500, detail=str(e))
         
 
+
 @router.get(
     "/vision-board/{reference_id}",
     response_model=List[VisionBoardResponse],
