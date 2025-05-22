@@ -141,73 +141,123 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
     try:
         user = req.dict()
         
-        # newly added edge case logics
-        # Check if all input values are empty
+        # # newly added edge case logics
+        # # Check if all input values are empty
+        # all_empty = (
+        #     (not user.get("wedding_preference") or user.get("wedding_preference") == "") and
+        #     (not user.get("venue_suits") or user.get("venue_suits") == "") and
+        #     (not user.get("wedding_style") or user.get("wedding_style") == "") and
+        #     (not user.get("wedding_tone") or user.get("wedding_tone") == "") and
+        #     (not user.get("guest_experience") or user.get("guest_experience") == "") and
+        #     (not user.get("events") or len(user.get("events", [])) == 0)
+        # )
+        
+        # if all_empty:
+        #     logger.warning("Request contains only empty values")
+        #     raise HTTPException(
+        #         status_code=400, 
+        #         detail="No preferences provided. Please specify at least one preference for your vision board."
+        #     )
+        
+        # # Check individual fields
+        # if not user.get("wedding_preference") or user.get("wedding_preference") == "":
+        #     logger.warning("Missing wedding_preference field")
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Wedding preference is missing. Please specify your wedding preference for your vision board."
+        #     )
+            
+        # if not user.get("venue_suits") or user.get("venue_suits") == "":
+        #     logger.warning("Missing venue_suits field")
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Venue preference is missing. Please specify which venue suits your vision board."
+        #     )
+            
+        # if not user.get("wedding_style") or user.get("wedding_style") == "":
+        #     logger.warning("Missing wedding_style field")
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Wedding style is missing. Please specify your wedding style for your vision board."
+        #     )
+            
+        # if not user.get("wedding_tone") or user.get("wedding_tone") == "":
+        #     logger.warning("Missing wedding_tone field")
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Wedding tone is missing. Please specify your wedding tone for your vision board."
+        #     )
+            
+        # if not user.get("guest_experience") or user.get("guest_experience") == "":
+        #     logger.warning("Missing guest_experience field")
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Guest experience is missing. Please specify your desired guest experience for your vision board."
+        #     )
+            
+        # if not user.get("events") or len(user.get("events", [])) == 0:
+        #     logger.warning("Missing events field")
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Events selection is missing. Please specify at least one event for your vision board."
+        #     )
+            
+        # if not user.get("reference_id") or user.get("reference_id") == "":
+        #     logger.warning("Missing reference_id field")
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Reference ID is missing. Please provide a reference ID for your vision board."
+        #     )
+
         all_empty = (
             (not user.get("wedding_preference") or user.get("wedding_preference") == "") and
             (not user.get("venue_suits") or user.get("venue_suits") == "") and
             (not user.get("wedding_style") or user.get("wedding_style") == "") and
             (not user.get("wedding_tone") or user.get("wedding_tone") == "") and
             (not user.get("guest_experience") or user.get("guest_experience") == "") and
-            (not user.get("events") or len(user.get("events", [])) == 0)
+            (not user.get("events") or len(user.get("events", [])) == 0) and
+            (not user.get("reference_id") or user.get("reference_id") == "")
         )
-        
+
         if all_empty:
             logger.warning("Request contains only empty values")
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="No preferences provided. Please specify at least one preference for your vision board."
             )
-        
-        # Check individual fields
+
+        missing_fields = []
         if not user.get("wedding_preference") or user.get("wedding_preference") == "":
-            logger.warning("Missing wedding_preference field")
-            raise HTTPException(
-                status_code=400,
-                detail="Wedding preference is missing. Please specify your wedding preference for your vision board."
-            )
-            
+            missing_fields.append("wedding_preference")
         if not user.get("venue_suits") or user.get("venue_suits") == "":
-            logger.warning("Missing venue_suits field")
-            raise HTTPException(
-                status_code=400,
-                detail="Venue preference is missing. Please specify which venue suits your vision board."
-            )
-            
+            missing_fields.append("venue_suits")
         if not user.get("wedding_style") or user.get("wedding_style") == "":
-            logger.warning("Missing wedding_style field")
-            raise HTTPException(
-                status_code=400,
-                detail="Wedding style is missing. Please specify your wedding style for your vision board."
-            )
-            
+            missing_fields.append("wedding_style")
         if not user.get("wedding_tone") or user.get("wedding_tone") == "":
-            logger.warning("Missing wedding_tone field")
-            raise HTTPException(
-                status_code=400,
-                detail="Wedding tone is missing. Please specify your wedding tone for your vision board."
-            )
-            
+            missing_fields.append("wedding_tone")
         if not user.get("guest_experience") or user.get("guest_experience") == "":
-            logger.warning("Missing guest_experience field")
-            raise HTTPException(
-                status_code=400,
-                detail="Guest experience is missing. Please specify your desired guest experience for your vision board."
-            )
-            
+            missing_fields.append("guest_experience")
         if not user.get("events") or len(user.get("events", [])) == 0:
-            logger.warning("Missing events field")
-            raise HTTPException(
-                status_code=400,
-                detail="Events selection is missing. Please specify at least one event for your vision board."
-            )
-            
+            missing_fields.append("events")
         if not user.get("reference_id") or user.get("reference_id") == "":
-            logger.warning("Missing reference_id field")
-            raise HTTPException(
-                status_code=400,
-                detail="Reference ID is missing. Please provide a reference ID for your vision board."
-            )
+            missing_fields.append("reference_id")
+
+
+        if missing_fields:
+             if len(missing_fields) == len(user.keys()): # If ALL fields are missing 
+                 logger.warning("Missing all required fields")
+                 raise HTTPException(
+                     status_code=400,
+                     detail="All preferences are missing. Please specify at least one preference for your vision board."
+                 )
+
+             elif len(missing_fields) < len(user.keys()): #If SOME fields are missing. We will give the specific missing fields.
+                missing_fields_str = ", ".join(missing_fields)
+                logger.warning(f"Missing fields: {missing_fields_str}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"The following preferences are missing: {missing_fields_str}. Please specify these preferences for your vision board."
+                )
             
             
         # 1) Fetch matching docs

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     database_name:           str = Field(..., env="DATABASE_NAME")
     image_input_collection:  str = Field(..., env="IMAGE_INPUT_COLLECTION")
     output_collection:       str = Field(..., env="OUTPUT_COLLECTION")
-
+    CHAT_CONVERSATIONS_COLLECTION: str = Field(..., env="CHAT_CONVERSATIONS_COLLECTION")
     # Schema directory (if used elsewhere)
     schema_dir:              str = Field(..., env="SCHEMA_DIR")
 
