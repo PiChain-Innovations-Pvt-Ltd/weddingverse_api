@@ -5,11 +5,12 @@ from dateutil import tz
 from fastapi import HTTPException
 from pymongo import ASCENDING
 from pymongo.errors import OperationFailure
+from typing import List
 
 from app.services.mongo_service import db
 from app.config import settings, FIELD_MAP
 from app.services.genai_service import model
-from app.models.vision_board import BoardItem, VisionBoardRequest
+from app.models.vision_board import BoardItem, VisionBoardRequest, VisionBoardResponse
 from app.utils.logger import logger
 
 IMAGE_INPUT_COLLECTION = settings.image_input_collection
@@ -295,3 +296,35 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
     except Exception:
         logger.error("Error in create_vision_board", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal error generating vision board")
+    
+
+async def get_vision_boards_by_id(reference_id: str) -> List[VisionBoardResponse]:
+
+    logger.info(f"Attempting to retrieve vision boards for reference_id: {reference_id}")
+    try:
+        # Use .find() to get a cursor of all matching documents
+        # Project out the _id field which is an ObjectId and not directly Pydantic compatible
+        cursor = db[settings.VISION_BOARD_COLLECTION].find(
+            {"reference_id": reference_id},
+            {"_id": 0} 
+        )
+
+        # Convert cursor to a list of dictionaries
+        board_docs = list(cursor)
+
+        if not board_docs:
+            logger.warning(f"No vision boards found for reference_id '{reference_id}'.")
+            raise HTTPException(status_code=500,detail="No vision boards found for this reference ID")
+
+        logger.info(f"Successfully retrieved {len(board_docs)} vision board(s) for reference_id: {reference_id}")
+        
+        # Validate each retrieved document against the VisionBoardResponse Pydantic model
+        # This will create a list of VisionBoardResponse objects
+        return [VisionBoardResponse(**doc) for doc in board_docs]
+
+    except HTTPException:
+        # Re-raise HTTPExceptions (e.g., 404 Not Found)
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving vision boards for reference_id '{reference_id}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
