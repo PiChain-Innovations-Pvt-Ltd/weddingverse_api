@@ -1,8 +1,10 @@
 import uvicorn
 from fastapi import FastAPI, Depends, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.utils.logger import logger
-from app.routers import vision_board, chat, image_categorization, auth
+from app.routers import vision_board, chat, image_categorization, auth, webhook
+from app.services import webhook_workflow_service
 from app.dependencies import require_jwt_auth
 from app.config import settings
 
@@ -13,6 +15,15 @@ root_path = getattr(settings, base_url_attr, "").rstrip("/")
 app = FastAPI(
     title="WeddingVerse API",
     root_path=root_path
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "https://weddingverse-qa.ken42.com"],  # replace with your actual client origin(s)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 logger.info(f"Starting WeddingVerse API under ENV={settings.env} at root_path={root_path}")
@@ -42,6 +53,13 @@ app.include_router(
     tags=["Image Categorization"]
 )
 
+# --- NEW: Include the webhook router ---
+app.include_router(
+    webhook.router, # Use the new webhook router
+    prefix="/api/v1", # The webhook path is /api/v1/webhook
+    tags=["Webhook Workflow"]
+)
+
 @app.exception_handler(status.HTTP_401_UNAUTHORIZED)
 async def unauthorized_exception_handler(request: Request, exc):
     return JSONResponse(
@@ -50,5 +68,10 @@ async def unauthorized_exception_handler(request: Request, exc):
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    await webhook_workflow_service.shutdown_httpx_client()
+    logger.info("Application shutdown complete.")
+
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

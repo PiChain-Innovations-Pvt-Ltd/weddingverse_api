@@ -14,7 +14,7 @@ from app.utils.schema_parser import parse_schema_summary
 from app.config import settings
 
 SCHEMA_DIR = settings.schema_dir
-OUTPUT_COLLECTION = settings.output_collection
+VISION_BOARD_COLLECTION = settings.VISION_BOARD_COLLECTION
 
 def is_mongo_query_request(question: str) -> bool:
     keywords = ["find", "show", "list", "where", "query", "give", "provide"]
@@ -139,5 +139,5 @@ def process_question(question: str) -> dict:
             "response_type": "conversation",
             "response": resp
         }
-    db[OUTPUT_COLLECTION].insert_one(output_doc)
+    db[VISION_BOARD_COLLECTION].insert_one(output_doc)
     return output_doc

@@ -11,7 +11,7 @@ from fastapi import HTTPException
 
 from app.services.vision_board_service import get_matching_boards, create_vision_board
 from app.models.vision_board import Color, BoardItem, VisionBoardRequest, VisionBoardResponse
-from app.config import GEMINI_API_KEY, OUTPUT_COLLECTION
+from app.config import GEMINI_API_KEY, VISION_BOARD_COLLECTION
 from app.services.mongo_service import db
 from app.utils.logger import logger
 
@@ -105,7 +105,7 @@ def categorize_and_match(
             )
 
             # persist
-            db[OUTPUT_COLLECTION].insert_one(vr.dict())
+            db[VISION_BOARD_COLLECTION].insert_one(vr.dict())
 
             results.append(vr)
 
