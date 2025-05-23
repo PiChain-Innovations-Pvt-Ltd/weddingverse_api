@@ -20,9 +20,6 @@ def init_database():
         
         sample_conversation = {
             "reference_id": "USER456",
-            "conversation_id": "USER456-CONV-001",
-            "start_time": "2025-05-21T09:00:00Z",
-            "last_updated": "2025-05-21T09:20:00Z",
             "conversation": [
                 {
                     "timestamp": "2025-05-21T09:01:00Z",

@@ -1,0 +1,103 @@
+def check_similar_question_in_memory(current_question: str, memory: str) -> Optional[str]:
+    """
+    Clean semantic similarity check with professor-level analysis (no syntax issues)
+    """
+    if not memory or not memory.strip():
+        return None
+    
+    prompt = f"""
+    You are a distinguished Professor of Computational Linguistics specializing in semantic analysis and wedding planning domain language.
+
+    CURRENT QUESTION: "{current_question}"
+
+    CONVERSATION HISTORY:
+    {memory}
+
+    EXPERT SEMANTIC ANALYSIS TASK:
+
+    WEDDING DOMAIN SEMANTIC KNOWLEDGE:
+    
+    Venue Terms: venue, hall, location, place, spot, site, facility, space, center, complex, resort, hotel, banquet, auditorium, marriage hall, function hall, wedding venue, reception venue, ceremony venue
+    
+    Photography Terms: photographer, photography, photo, picture, camera, shoot, candid, traditional, pre-wedding, wedding photography service, photo coverage, video coverage, cinematography
+    
+    Catering Terms: caterer, catering, food, menu, cuisine, buffet, meal, dining, refreshment, catering service, food service, wedding catering
+    
+    Budget Terms: cost, price, budget, rate, charge, fee, amount, expense, affordable, cheap, expensive, premium, under, below, within, above, less than, more than
+    
+    Location Terms: in, at, around, near, within, area, city, locality, region, zone
+    
+    Quality Terms: good, best, top, excellent, quality, premium, recommended, popular, famous, experienced, professional
+
+    ADVANCED LINGUISTIC ANALYSIS:
+
+    1. SEMANTIC EQUIVALENCE PATTERNS:
+    - "Show me X" = "Find X" = "List X" = "Give me X" = "Provide X"
+    - "venues" = "halls" = "wedding locations" = "marriage halls" = "function halls"
+    - "photographers" = "photography services" = "photo coverage" = "camera services"
+    - "under 50k" = "below 50000" = "within 50k budget" = "less than fifty thousand"
+    - "in Mumbai" = "Mumbai area" = "around Mumbai" = "Mumbai city" = "Mumbai region"
+    - "good caterers" = "quality catering" = "best catering services" = "recommended caterers"
+
+    2. NUMERICAL UNDERSTANDING:
+    - 1 lakh = 100000 = 1L = one lakh
+    - 50k = 50000 = fifty thousand
+    - 2 lakhs = 200000 = 2L = two lakhs
+
+    3. IMPLICIT CONTEXT EXPANSION:
+    - In wedding planning context: "venues" means "wedding venues"
+    - In wedding planning context: "photographers" means "wedding photographers"
+    - In wedding planning context: "caterers" means "wedding caterers"
+
+    4. FUNCTIONAL EQUIVALENCE TEST:
+    Ask: "Would the answer to the previous question completely satisfy the current question's information need?"
+
+    SIMILARITY EXAMPLES:
+
+    HIGH SIMILARITY (Should Match):
+    ✓ "Show me venues in Mumbai" ↔ "Find wedding halls in Mumbai"
+    ✓ "List photographers under 50000" ↔ "Photography services within 50k budget"  
+    ✓ "Good caterers in Delhi" ↔ "Quality catering services Delhi area"
+    ✓ "Budget venues under 1 lakh" ↔ "Affordable wedding halls below 100000"
+    ✓ "Venues with parking" ↔ "Wedding halls that have parking facilities"
+
+    NO SIMILARITY (Should NOT Match):
+    ✗ "Venues in Mumbai" ↔ "Photographers in Mumbai" (different services)
+    ✗ "Under 1 lakh venues" ↔ "Above 2 lakh venues" (opposite budget ranges)
+    ✗ "Mumbai venues" ↔ "Delhi venues" (different locations)
+    ✗ "Indoor venues" ↔ "Outdoor venues" (opposite venue types)
+
+    ANALYSIS INSTRUCTION:
+    Using your expertise in computational linguistics, analyze if the current question is semantically equivalent to ANY previous question in the conversation history. Look beyond surface words to deep meaning, intent, and functional equivalence.
+
+    Consider:
+    - Synonym relationships and paraphrasing
+    - Domain-specific terminology variations
+    - Implicit context and assumptions
+    - Pragmatic intent and information goals
+    - Numerical and measurement equivalencies
+
+    RESPONSE FORMAT:
+    If you find a semantically equivalent question: "SIMILAR: [exact previous question text]"
+    If no equivalent question exists: "NOT_SIMILAR"
+
+    Your analysis should demonstrate the rigor of advanced linguistic research.
+
+    RESULT:
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
+        
+        if response_text.startswith("SIMILAR:"):
+            similar_question = response_text.replace("SIMILAR:", "").strip()
+            logger.info(f"Semantic match found: '{current_question}' ↔ '{similar_question}'")
+            return similar_question
+        else:
+            logger.debug(f"No semantic match for: '{current_question}'")
+            return None
+            
+    except Exception as e:
+        #logger.warning(f"Error in semantic similarity check: {e}")
+        return None

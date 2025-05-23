@@ -1,19 +1,30 @@
 from fastapi import APIRouter, HTTPException
 from app.utils.logger import logger
-from app.models.chat import ChatRequest, ChatConversationDocument
+from app.models.chat import ChatRequest, CurrentChatInteractionResponse # Changed model
 from app.services.chat_service import process_question
+from datetime import datetime, timezone # Added for timestamp
 
 router = APIRouter()
 
-@router.post("/chat") # No `response_model` here, we return a dict
+@router.post("/chat", response_model=CurrentChatInteractionResponse) # Updated response_model
 def chat_endpoint(req: ChatRequest):
     try:
-        conversation_document: ChatConversationDocument = process_question(req.reference_id, req.question)
+        # process_question now returns current Q, A, and error history
+        current_question, current_answer, error_history = process_question(req.reference_id, req.question)
         
-        # Serialize the Pydantic model to a dictionary,
-        # excluding any fields that are None (like historical timestamps).
-        # by_alias=True ensures "_id" is used if specified in the model.
-        return conversation_document.model_dump(by_alias=True, exclude_none=True)
+        # Get current timestamp for this interaction
+        interaction_timestamp = datetime.now(timezone.utc)
+
+        # Construct the response using the new model
+        response = CurrentChatInteractionResponse(
+            reference_id=req.reference_id,
+            current_timestamp=interaction_timestamp,
+            question=current_question,
+            answer=current_answer,
+            error_history=error_history # Pass along error history if any
+        )
+        
+        return response
 
     except HTTPException as he: # Re-raise HTTPExceptions directly
         raise he

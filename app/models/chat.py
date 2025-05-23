@@ -25,7 +25,7 @@ class MongoResult(BaseModel): # This is a general model, may not be directly in 
     results: List[Any]
 
 # This ChatResponse might be for an older structure or a different purpose.
-# The primary response for the /chat endpoint is now ChatConversationDocument.
+# The primary response for the /chat endpoint is now CurrentChatInteractionResponse.
 class ChatResponse(BaseModel):
     reference_id: str
     timestamp: str
@@ -34,26 +34,38 @@ class ChatResponse(BaseModel):
     response: Optional[str] = None # For direct LLM text
     mongo_query: Optional[str] = None
     results: Optional[List[MongoResult]] = None # For structured query results
-    error: Optional[str] = None
-    error_history: Optional[List[ErrorHistoryItem]] = None
-    table_output: Optional[str] = None
+    # error: Optional[str] = None
+    # error_history: Optional[List[ErrorHistoryItem]] = None
+    # table_output: Optional[str] = None
 
 
 # --- Models for Chat Conversation Collection ---
 
 class ConversationEntry(BaseModel):
-    timestamp: Optional[datetime] = None # For new entries, we'll set this; for historical, it will be None due to projection
+    # timestamp: Optional[datetime] = None # REMOVED: Timestamp will not be stored per entry in DB
     question: str
     answer: List[Dict[str, Any]] # Flexible: holds AI text response or structured data
-    # answer_source was removed
 
 class ChatConversationDocument(BaseModel):
     reference_id: str = Field(alias="_id")
-    # start_time and last_updated were removed
     conversation: List[ConversationEntry] = []
 
     class Config:
         populate_by_name = True
+        # json_encoders for datetime are no longer needed here if ConversationEntry has no datetime
+        # and if there are no other datetime fields at this level of the document.
+
+# --- New Response Model for the /chat endpoint ---
+class CurrentChatInteractionResponse(BaseModel):
+    reference_id: str
+    current_timestamp: datetime # Timestamp for THIS specific interaction
+    question: str
+    answer: List[Dict[str, Any]] # The answer to the current question
+    # Optional: If you want to include error history for the current attempt in the response
+    #error_history: Optional[List[ErrorHistoryItem]] = None
+
+    class Config:
+        populate_by_name = True
         json_encoders = {
-            datetime: datetime_to_zulu # This will apply to ConversationEntry.timestamp when it's present
+            datetime: datetime_to_zulu
         }

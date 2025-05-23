@@ -26,7 +26,7 @@ def login(user: UserLogin):
     from app.config import settings
     
     # Set expiration time (e.g., 30 minutes)
-    expires_delta = timedelta(minutes=30)
+    expires_delta = timedelta(minutes=120)
     expire = datetime.utcnow() + expires_delta
     
     # Create payload

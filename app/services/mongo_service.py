@@ -22,7 +22,7 @@ def initialize_conversation_collection():
     if "reference_id_1" not in [idx["name"] for idx in conversations_collection.list_indexes()]:
         conversations_collection.create_index("reference_id", unique=True)
     
-    # Create index on conversation_id for faster lookups
+    # # Create index on conversation_id for faster lookups
     if "conversation_id_1" not in [idx["name"] for idx in conversations_collection.list_indexes()]:
         conversations_collection.create_index("conversation_id", unique=True)
     
