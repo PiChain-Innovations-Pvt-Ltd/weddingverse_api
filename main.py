@@ -19,7 +19,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # replace with your actual client origin(s)
+    allow_origins=["http://localhost:5173", "https://weddingverse-qa.ken42.com"],  # replace with your actual client origin(s)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
