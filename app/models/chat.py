@@ -38,32 +38,36 @@ class ChatResponse(BaseModel):
     # error_history: Optional[List[ErrorHistoryItem]] = None
     # table_output: Optional[str] = None
 
-
 # --- Models for Chat Conversation Collection ---
 
 class ConversationEntry(BaseModel):
-    # timestamp: Optional[datetime] = None # REMOVED: Timestamp will not be stored per entry in DB
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # ADDED BACK: For 30-day memory filtering
     question: str
-    answer: List[Dict[str, Any]] # Flexible: holds AI text response or structured data
+    #answer: List[Dict[str, Any]] # Flexible: holds AI text response or structured data
+    answer:Any
 
 class ChatConversationDocument(BaseModel):
     reference_id: str = Field(alias="_id")
     conversation: List[ConversationEntry] = []
-
+    
     class Config:
         populate_by_name = True
-        # json_encoders for datetime are no longer needed here if ConversationEntry has no datetime
-        # and if there are no other datetime fields at this level of the document.
+        json_encoders = {
+            datetime: datetime_to_zulu  # Added back for timestamp encoding
+        }
 
 # --- New Response Model for the /chat endpoint ---
 class CurrentChatInteractionResponse(BaseModel):
     reference_id: str
     current_timestamp: datetime # Timestamp for THIS specific interaction
     question: str
-    answer: List[Dict[str, Any]] # The answer to the current question
+    #answer: List[Dict[str, Any]] # The answer to the current question
+    answer:Any
+    
+    
     # Optional: If you want to include error history for the current attempt in the response
     #error_history: Optional[List[ErrorHistoryItem]] = None
-
+    
     class Config:
         populate_by_name = True
         json_encoders = {
