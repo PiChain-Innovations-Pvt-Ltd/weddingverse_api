@@ -8,3 +8,7 @@ python-multipart
 python-dateutil
 pydantic-settings
 python-jose[cryptography]
+httpx
+gspread
+google-auth-oauthlib
+google-auth   
