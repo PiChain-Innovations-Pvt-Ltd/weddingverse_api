@@ -1,6 +1,1226 @@
-# Add your schema summary content here. E.g.:
-# Collection: Venues
-# Description: Information about venues
-# Fields:
-# - Name (string, Nullable)
-# - City (string, Nullable)
+Schema Summary for MongoDB database: data
+==================================================
+
+Collection: makeups
+--------------------------------------------------
+Description: **Makeups Collection Description:**
+
+Makeup artist and salon listing | `_id`, `Title`, `Location`, `Rating`, `Services Offered`, `Starting Price`, `Reviews`, `City`, `State` | This collection stores data on makeup artists and salons, enabling analysis of pricing trends, service popularity, geographic distribution, and customer sentiment based on reviews and ratings. Key fields like `Location` and `Services Offered` facilitate geographic and service-based segmentation. `Starting Price` and `Rating` are crucial for price-quality analysis. The nested `Details` field provides granular information for in-depth profiling.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id**: Unique identifier for each makeup document. | Immutable, automatically generated ObjectId. | Used for efficient document retrieval by ID, range queries, and ensuring data integrity.
+
+  - Title (str, Required)
+    Description: Title: Makeup product's name. | String, required, unique within the collection. | Used for searching specific products, filtering by brand, and displaying product information.
+
+  - Location (str, Nullable)
+    Description: Location: Store's geographical location. | String representing city, state, or country. Must be a valid location. | Used for finding makeups available in a specific area or analyzing regional trends.
+
+  - Rating (str, Required)
+    Description: Rating: Average customer rating for a makeup product. | String representation of a numerical value (e.g., "4.5"). Must be a valid number. | Used for filtering products by rating range (e.g., rating >= "4.0") or sorting by rating.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered**: Details the makeup services provided. | Object containing boolean flags for each service (e.g., `bridal: true`, `contouring: false`). Must have at least one service set to `true`. | Used to filter makeups by specific service availability.
+
+  - Services Offered.Airbrush Makeup (str, Nullable)
+    Description: Services Offered.Airbrush Makeup: Indicates if airbrush makeup is offered. | Boolean-like string: "yes" or "no". Case-insensitive. | Query to filter makeup artists offering airbrush services (e.g., `{"Services Offered.Airbrush Makeup": "yes"}`).
+
+  - Services Offered.Bridal Makeup (str, Nullable)
+    Description: **Services Offered.Bridal Makeup**: Indicates if bridal makeup services are offered. | String value: "Yes" or "No". Default is "No". | Query to find makeup artists offering bridal makeup (e.g., `{"Services Offered.Bridal Makeup": "Yes"}`).
+
+  - Services Offered.Guest/Family Makeup (str, Nullable)
+    Description: **Services Offered.Guest/Family Makeup:** Describes the makeup services provided, specifying if for a guest or family. | String; limited to predefined service types and guest/family designations. | Query for specific service types or family packages.
+
+  - Amenities (list(str), Nullable)
+    Description: **Amenities**: Lists amenities offered with the makeup product (e.g., "Cruelty-Free", "Vegan"). | Must be a list of strings. Empty lists are allowed. | Used to filter makeups based on specific amenity preferences.
+
+  - Policies (list(str), Nullable)
+    Description: **Policies**: List of ethical/manufacturing policies (e.g., "Cruelty-Free", "Vegan"). | Must be a list of strings. Empty lists allowed. | Used to filter makeups based on desired ethical standards.
+
+  - Other Information (list(str), Nullable)
+    Description: **Other Information**: Free-form list of strings containing additional product details not covered by other fields. | Strings should be concise and relevant. Duplicates allowed. | Used for keyword searches and filtering based on specific product attributes.
+
+  - Image URLs (list(str), Required)
+    Description: **Image URLs:** | List of URLs pointing to images of the makeup product. Must be valid URLs. | Used to display product images; query by URL to find specific images or products associated with a URL.
+
+  - Address (str, Required)
+    Description: Address: Physical location of the makeup product's manufacturer or distributor. | String, required. Must be a valid address. | Used for geographic analysis, filtering by region, and identifying distribution networks.
+
+  - Phone (str, Required)
+    Description: Phone: Contact phone number of the makeup artist. | String format, may include country code. Required. | Used for contacting artists, filtering by area code, or searching for specific numbers.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an empty list of review objects for each makeup product. | Initially empty; reviews are added dynamically. | Used to retrieve all reviews for a specific makeup product after reviews are added.
+
+  - City (str, Required)
+    Description: City: City where the makeup product is sold. | String, required. Represents a valid city name. | Used for filtering makeups by location, analyzing regional product popularity, and targeted marketing campaigns.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the makeup's origin. | Must be a valid 6-digit Indian postal code string. | Used to filter makeups by region or delivery area.
+
+  - State (str, Required)
+    Description: State: US state where the makeup product is sold. | Must be a valid two-letter US state abbreviation (e.g., "CA", "NY"). | Used for filtering products available in a specific state or analyzing sales data by state.
+
+  - Complete Location (str, Nullable)
+    Description: Complete Location: Stores the full, formatted address string of the makeup product's origin or manufacturing location. | Must be a valid address string. | Used for location-based analysis and filtering by specific addresses.
+
+  - Starting Price (str, Nullable)
+    Description: **Starting Price:** The lowest price point for a makeup product. | Must be a string representing a numerical value (e.g., "10.00"). May be null if unavailable. | Used for price range filtering and sorting.
+
+  - Details (object, Nullable)
+    Description: **Details**: Stores specific makeup product attributes. | Must be a valid JSON object; structure varies by product type. | Used to filter by specific ingredients, finishes, or application methods.
+
+  - Details.Awards Received (str, Nullable)
+    Description: Details.Awards Received: List of awards the makeup product has received. | String format, may be empty if no awards. | Used to filter products by award recognition or analyze award-winning product characteristics.
+
+  - Details.Practicing Makeup Since (str, Nullable)
+    Description: Details.PracticingMakeupSince: Year the makeup artist started practicing. | String representing a year (e.g., "2015"). Must be a valid year. | Used to filter artists by experience level or track industry trends.
+
+  - Details.Extensions (str, Nullable)
+    Description: **Details.Extensions**: Lists any extensions or special features of the makeup product. | String; free-form text. | Query for products with specific features (e.g., "SPF", "Waterproof").
+
+  - Details.Products Used (str, Nullable)
+    Description: **Details.Products Used:** A comma-separated string listing specific makeup products applied. | String length limited to 500 characters. | Used to filter makeups by product type or brand, and analyze product usage trends.
+
+  - Details.Travels to Venue (str, Nullable)
+    Description: Details.Travels to Venue: Indicates if the makeup artist travels to the client's venue. | String, typically "Yes" or "No". Case-insensitive. | Used to filter makeup artists based on travel availability for client location.
+
+  - Details.Airbrush (str, Nullable)
+    Description: **Details.Airbrush**: Indicates if airbrush makeup was used. | String, typically "Yes" or "No". Case-insensitive. | Query to filter makeups using airbrush technique (e.g., `{"Details.Airbrush": "Yes"}`).
+
+  - Details.Trial policy (str, Nullable)
+    Description: **Details.Trial policy**: Indicates the availability of a trial period for the makeup product. | String values: "Available", "Unavailable", or null. Null implies unknown. | Used to filter products offering free trials.
+
+  - Details.Prices inclusive of (str, Nullable)
+    Description: Default description for Details.Prices inclusive of: Field of type str in collection makeups.
+  - Details.Advance Amount (%) (str, Nullable)
+    Description: Default description for Details.Advance Amount (%): Field of type str in collection makeups.
+  - Other services (list(empty), list(str), Nullable)
+    Description: **Other services**: Stores a list of additional services offered with the makeup (e.g., "hair styling"). | Must be an empty list or a list of strings. | Query for makeups offering specific additional services or none at all.
+
+
+Collection: venues
+--------------------------------------------------
+Description: **Venues Collection Description:**
+
+Venues collection stores information about event spaces and venues, likely for a booking or review platform. | Key fields include `Title`, `Location`, `Rating`, `Services Offered` (with nested veg/non-veg details), `Amenities`, `Address`, `Reviews`, `City`, `PinCode`, and pricing details like `Veg Plate Price` and `Non-Veg Plate Price`. | Common use cases involve analyzing venue popularity by location and rating, identifying service trends, understanding pricing variations, and correlating amenities with review scores to optimize venue recommendations and market analysis.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id**: Unique identifier for each venue document. | Immutable ObjectId automatically generated by MongoDB. Ensures uniqueness across the 'venues' collection. | Used for direct document retrieval, updates, and deletions.
+
+  - Title (str, Required)
+    Description: **Title**: Venue's official name. | String, required, must be unique within a geographic area. | Used for searching venues by name, displaying venue information, and filtering results.
+
+  - Location (str, Nullable)
+    Description: Location: Venue's physical address. | String, free-form text. Must be a valid, recognizable address. | Used for proximity searches, filtering by city/state, and displaying venue location on maps.
+
+  - Rating (str, Required)
+    Description: Rating: Venue's average user rating. | String representation of a numerical value, typically 1-5 (e.g., "4.5"). Must be a valid number. | Used for filtering venues by popularity or displaying top-rated locations.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** Stores a document detailing services provided by the venue (e.g., catering, AV equipment). | Must be a valid JSON object. Keys represent service names, values represent availability/details. | Used to filter venues based on specific service offerings.
+
+  - Services Offered.Veg (str, Nullable)
+    Description: Services Offered.Veg: Indicates if the venue offers vegetarian food options. | String, typically "Yes" or "No". Case-insensitive. | Query for venues with vegetarian options (e.g., `{"Services Offered.Veg": "Yes"}`).
+
+  - Services Offered.Non Veg (str, Nullable)
+    Description: **Services Offered.Non Veg**: Indicates if the venue offers non-vegetarian food options. | Must be a string, typically "Yes" or "No". Case-insensitive. | Used to filter venues based on non-vegetarian food availability.
+
+  - Amenities (list(str), Nullable)
+    Description: Amenities: List of strings representing available venue features (e.g., "WiFi", "Parking"). | Must be a list of strings. Empty lists are allowed. | Used to filter venues based on desired amenities.
+
+  - Policies (list(str), Nullable)
+    Description: **Policies**: Lists venue-specific policies (e.g., "No outside food", "Pet-friendly"). | Must be strings. Can be empty. | Used to filter venues based on specific policy requirements.
+
+  - Other Information (list(str), Nullable)
+    Description: **Other Information**: Free-form text providing additional details about the venue. | Array of strings. Each string should be concise. | Used for keyword searches, filtering venues based on specific amenities or features not captured in other fields.
+
+  - Image URLs (list(str), Required)
+    Description: Image URLs: Stores a list of URLs pointing to images of the venue. | Must be valid, publicly accessible URLs. Order may reflect image priority. | Used for displaying venue images in search results or detail pages.
+
+  - Address (str, Required)
+    Description: Address: Physical location of the venue. | Must be a valid street address string. Cannot be empty. | Used for proximity searches, filtering by location, and displaying venue details.
+
+  - Phone (str, Required)
+    Description: Phone: Venue's primary phone number. | String, must be a valid phone number format (e.g., E.164). Can be null. | Used for contacting venues, finding venues by phone number.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an empty list of review documents for each venue. | Initially empty; reviews are added dynamically. | Used to find venues with no reviews yet or to prepare for review aggregation.
+
+  - City (str, Required)
+    Description: City: The city where the venue is located. | String, required. Must be a valid city name. | Used for filtering venues by location, proximity searches, and regional analysis.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the venue. | Must be a valid 6-digit Indian PIN code. | Used for location-based queries, filtering venues within a specific area, and proximity searches.
+
+  - State (str, Required)
+    Description: State: The U.S. state where the venue is located. | Must be a valid two-letter U.S. state abbreviation (e.g., "CA"). | Used for filtering venues by state, analyzing regional trends, and location-based searches.
+
+  - Services Offered.Rental per day (int, Nullable)
+    Description: Services Offered.Rental per day: Represents the daily rental cost (in whole currency units) for a specific service offered at the venue. | Must be a non-negative integer. | Used to filter venues by rental price range or sort by rental cost.
+
+  - Complete Location (str, Nullable)
+    Description: **Complete Location:** A concatenated string representing the full venue address. | Must include street address, city, state, and zip code. | Used for location-based searches and displaying venue addresses.
+
+  - Areas.name (str, Nullable)
+    Description: **Areas.name**: Name of the venue area (e.g., "Main Hall", "Patio"). | Must be a non-empty string. Names should be descriptive and unique within a venue. | Used for filtering venues by specific areas or displaying area names.
+
+  - Areas.seating (str, Nullable)
+    Description: Areas.seating: Denotes the seating type in a venue area (e.g., "tables", "booths", "standing"). | Must be a string. Common values are predefined. | Used to filter venues by seating preferences or capacity planning.
+
+  - Areas.floating (str, Nullable)
+    Description: **Areas.floating**: Indicates if the venue has floating areas (e.g., barges, rafts). | String, either "yes" or "no". Defaults to "no". | Used to filter venues with or without floating areas.
+
+  - Areas.type (str, Nullable)
+    Description: Areas.type: Type of area within the venue (e.g., "indoor", "outdoor", "patio"). | Must be a valid string. Case-insensitive. | Used to filter venues by area type, e.g., finding venues with outdoor seating.
+
+  - Areas (list(dict), Nullable)
+    Description: **Areas**: Defines distinct areas within a venue. | Each dictionary contains `name` (string, required) and `capacity` (integer, optional). `name` must be unique within the venue. | Query by area `name` to filter events or capacity for venue selection.
+
+  - Veg Plate Price (str, Nullable)
+    Description: Veg Plate Price: Price of a vegetarian plate at the venue. | String representing the price (e.g., "12.99"). Must be a valid numerical string. | Used to filter venues by price range for vegetarian options.
+
+  - Non-Veg Plate Price (str, Nullable)
+    Description: **Non-Veg Plate Price:** Price of a non-vegetarian plate at the venue. | String representing a numerical value; must be a valid price format (e.g., "12.99"). | Used for filtering venues by price range or sorting by price.
+
+  - Details (object, Nullable)
+    Description: **Details:** Venue-specific information like opening hours, parking, or accessibility. | Object with flexible key-value pairs. Keys should be descriptive strings. | Query for venues based on specific detail availability (e.g., `{"Details.parking": {$exists: true}}`).
+
+  - Details.Catering policy (str, Nullable)
+    Description: **Details.Catering policy**: Specifies the venue's catering policy (e.g., "In-house only", "External allowed", "Negotiable"). | Must be a string. | Used to filter venues based on catering options and restrictions.
+
+  - Details.Decor Policy (str, Nullable)
+    Description: Details.Decor Policy: Describes the venue's decoration policy for events. | Free-form text. Should specify allowed decorations and any restrictions. | Used to filter venues based on decoration flexibility for event planning.
+
+  - Details.Space (str, Nullable)
+    Description: Details.Space: Describes the venue's space type (e.g., "Indoor", "Outdoor", "Rooftop"). | String value. Limited to predefined space types. | Used to filter venues by space type for event planning or accessibility needs.
+
+  - Details.Outside Alcohol (str, Nullable)
+    Description: Details.OutsideAlcohol: Indicates whether patrons are allowed to bring outside alcohol to the venue. | String, typically "Yes" or "No". Case-insensitive. | Query to filter venues based on BYOB policy.
+
+  - Details.DJ Policy (str, Nullable)
+    Description: Details.DJ Policy: Describes the venue's policy regarding DJs (e.g., "DJ Allowed", "No DJs", "Specific Genres Only"). | String value. Case-insensitive. | Used to filter venues based on DJ availability and policy preferences.
+
+  - Details.Features (str, Nullable)
+    Description: **Details.Features:** Lists key amenities or attributes of the venue. | String array, each element < 50 chars. | Used to filter venues by specific features (e.g., "Wi-Fi", "Outdoor Seating").
+
+  - Details.Start of Venue (str, Nullable)
+    Description: **Details.Start of Venue:** The date and time the venue officially opened. | Must be a valid date/time string in ISO 8601 format. | Used for filtering venues opened within a specific timeframe or for calculating venue age.
+
+  - Details.Room Count (str, Nullable)
+    Description: Details.Room Count: Number of rooms in the venue. | Must be a string representation of a non-negative integer. | Used to filter venues by room capacity, e.g., finding venues with "5" or more rooms.
+
+  - Details.Room Price (str, Nullable)
+    Description: Details.Room Price: The price of a room at the venue. | Must be a string representing a numerical value (e.g., "120.00"). Should be positive. | Used for filtering venues by price range or specific price points.
+
+
+Collection: decors
+--------------------------------------------------
+Description: **Decors Collection Description:**
+
+**Collection Purpose:** Stores comprehensive information about decoration service providers, likely for a platform connecting users with decor vendors for events or spaces.
+
+**Key Fields:** `_id`, `Title`, `Location`, `Rating`, `Services Offered`, `Starting Price`, `Reviews`, `City`, `State`, `PinCode`. `Image URLs` provides visual context.
+
+**Common Use Cases:** Analyzing decor service trends by location, rating, price, and services offered. Identifying popular vendors, understanding pricing models (indoor/outdoor budgets), and correlating reviews with service types. Enables geographic analysis, vendor performance evaluation, and targeted marketing strategies.
+
+
+  - _id (ObjectId, Required)
+    Description: **Unique document identifier** | Immutable, automatically generated 12-byte ObjectId. | Used for efficient document retrieval by ID, range queries, and indexing.
+
+  - Title (str, Required)
+    Description: **Title**: Decor item title. | String, required, max length 100 characters. Must be unique within the collection. | Used for searching, filtering, and displaying decor items.
+
+  - Location (str, Nullable)
+    Description: Location: Physical address of the decor item. | String, free-form text. Required. | Used for proximity-based searches (e.g., "find decors near [address]") and filtering by specific locations.
+
+  - Rating (str, Required)
+    Description: Rating: Decor's user-assigned rating (e.g., "Excellent", "Good", "Fair", "Poor"). | Must be a string from a predefined set of values. | Used to filter decors by quality or aggregate average ratings.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** Details the decoration services provided. | Object containing boolean flags (e.g., `floralArrangements: true`, `lighting: false`). Must have at least one service set to `true`. | Used to filter decors based on specific service availability.
+
+  - Amenities (list(str), Nullable)
+    Description: **Amenities**: List of strings representing available features of a decor item. | Must be a list of strings. Standardized amenity names preferred. | Used to filter decors based on specific features (e.g., "pool", "gym").
+
+  - Policies (list(str), Nullable)
+    Description: **Policies:** List of applicable policies (e.g., "Warranty", "Return"). | Must be a list of strings. Empty lists allowed. | Used to filter decors based on supported policies.
+
+  - Other Information (list(str), Nullable)
+    Description: **Other Information**: Free-form list of strings for miscellaneous decor details. | No enforced format. Max list size: 10. | Used for keyword searches and filtering based on specific attributes not covered by other fields.
+
+  - Image URLs (list(str), Required)
+    Description: **Image URLs**: Stores a list of URLs (strings) pointing to images of a decor item. | Must be valid URLs. Empty lists are allowed if no images are available. | Used to retrieve all images associated with a specific decor item.
+
+  - Address (str, Required)
+    Description: Address: Physical location of the decor installation. | Must be a valid street address string. Cannot be empty. | Used for location-based searches, proximity calculations, and service area determination.
+
+  - Phone (str, Required)
+    Description: Phone: Decorator's phone number. | Must be a valid phone number string. | Used to contact decorators, filter by area code, or identify unique decorators.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores customer reviews for a decor item. | Initially empty list; reviews are added as strings. | Query to check if an item has any reviews (e.g., `{$exists: "reviews", $not: {$size: 0}}`) or to retrieve all reviews for a specific decor.
+
+  - City (str, Required)
+    Description: City: The city where the decor item is located. | Must be a valid city name. Case-insensitive. | Used for filtering decors by location, proximity searches, and regional analysis.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the decor's location. | Must be a valid postal code format (e.g., 6 digits in India). | Used for location-based searches, filtering decors within a specific area, and proximity queries.
+
+  - State (str, Required)
+    Description: State: US state where the decor is located. | Must be a valid two-letter US state abbreviation (e.g., "CA", "NY"). | Used for filtering decors by location, e.g., finding all decors in California.
+
+  - Services Offered.Indoor Decor (str, Nullable)
+    Description: Services Offered.Indoor Decor: | Stores a string describing indoor decor services offered. Must be a valid string. | Used to filter decors based on specific indoor decor services, e.g., "Interior Design", "Furniture Selection".
+
+  - Services Offered.Outdoor Decor (str, Nullable)
+    Description: Services Offered.Outdoor Decor: | Stores specific outdoor decor services offered (e.g., "Patio Design", "Landscape Lighting"). String values. | Must be a valid service offering. | Used to filter decors based on available outdoor services.
+
+  - Complete Location (str, Nullable)
+    Description: Complete Location: Full address string of the decor item's location. | Must be a valid, human-readable address. | Used for location-based searches, proximity queries, and display purposes.
+
+  - Starting Price (object, Nullable)
+    Description: **Starting Price:** | Represents the initial price of a decor item. Must be a valid numerical value (e.g., {USD: 99.99}). Currency code is required. | Used for filtering decors within a specific price range or by currency.
+
+  - Starting Price.Indoor Budget (250 pax) (str, Nullable)
+    Description: Starting Price.Indoor Budget (250 pax): Starting price for indoor decor services accommodating 250 guests. | String representation of a numerical value; may contain currency symbols. | Used to filter decors based on budget ranges for indoor events.
+
+  - Starting Price.Outdoor Budget (250 pax) (str, Nullable)
+    Description: Starting Price.Outdoor Budget (250 pax): Estimated starting price for outdoor decor services accommodating 250 guests. | String representation of a numerical value, may contain currency symbols. | Used to filter decors based on budget ranges for outdoor events.
+
+  - Starting Price.Banquet Decor Price (str, Nullable)
+    Description: Starting Price.Banquet Decor Price: Starting price for banquet decor services. | String representing a numerical value, potentially including currency symbols. Must be non-negative. | Used for filtering decors within a specific price range.
+
+  - Details (object, Nullable)
+    Description: **Details**: Holds specific attributes of a decor item. | Must contain key-value pairs representing decor properties (e.g., color, material). Keys should be consistent across similar decor types. | Used for filtering decors by specific attributes like `Details.color: "red"` or `Details.material: "wood"`.
+
+  - Details.Service Type (str, Nullable)
+    Description: Details.Service Type: The type of decoration service offered (e.g., "Wedding Decor", "Corporate Event"). | Must be a valid service type from a predefined list. | Used to filter decors by service type, e.g., finding all "Wedding Decor" options.
+
+  - Details.Experience Zones (str, Nullable)
+    Description: **Details.Experience Zones**: Stores comma-separated strings representing applicable experience zones (e.g., "Living Room, Bedroom"). | Must be a valid, predefined zone. | Used to filter decors suitable for specific room types or areas.
+
+  - Details.Year of operations (str, Nullable)
+    Description: Details.Year of operations: The year the decor business started operating. | Must be a valid year (YYYY) string. | Used for filtering decors based on operational history, e.g., finding businesses operating since 2010.
+
+  - Other services (list(empty), list(str), Nullable)
+    Description: **Other services**: List of additional services offered for a decor item. | Must be an empty list or a list of strings. | Query for decors offering specific additional services, or those with no additional services.
+
+  - Details.On the Panel  of (str, Nullable)
+    Description: **Details.On the Panel of:** Specifies the decor's placement on a panel. | String value; free-form text describing the panel (e.g., "Door," "Wall," "Cabinet"). | Used to filter decors based on panel location.
+
+
+Collection: jewellery
+--------------------------------------------------
+Description: **Jewellery Collection:** Stores information about jewellery stores for analysis. | Key fields include `Title`, `Complete Location`, `Starting Price`, `Rating`, `Reviews`, `City`, `State`, and nested `Details` fields. | Used for market analysis, identifying popular locations, price point trends, sentiment analysis of reviews, and correlation between ratings, services, and location. The `Location` field may relate to a separate geospatial data source.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id: Unique identifier for each jewellery document.** | Immutable, automatically generated ObjectId. Ensures uniqueness within the 'jewellery' collection. | Used for precise document retrieval, updates, and deletions.
+
+  - Title (str, Required)
+    Description: Title: Name of the jewellery item. | String, required, max length 100 characters. Must be descriptive and unique within the collection. | Used for searching, filtering, and displaying jewellery items.
+
+  - Complete Location (str, Nullable)
+    Description: **Complete Location:** Full address of the jewellery store. | Must be a valid, human-readable address string. | Used for location-based queries, proximity searches, and reporting by geographic area.
+
+  - Starting Price (object, Nullable)
+    Description: **Starting Price:** The initial price of a jewellery item. | Must be a positive number. Represents the base price before any discounts or markups. | Used for filtering jewellery within a price range or sorting by price.
+
+  - Starting Price.Starting Price (str, Nullable)
+    Description: Starting Price.Starting Price: The initial price of a jewellery item. | Must be a string representing a valid numerical value. Cannot be negative. | Used for filtering items by price range or finding the lowest starting price.
+
+  - Details (object, Nullable)
+    Description: **Details**: Stores specific attributes of a jewellery item. | Must be a valid JSON object. Keys and values vary based on jewellery type. | Used to filter jewellery by specific characteristics like stone type, metal purity, or dimensions.
+
+  - Rating (str, Required)
+    Description: Rating: Customer-assigned rating for the jewellery item. | String value representing a rating (e.g., "5 stars", "Good", "Excellent"). Must be a valid rating value. | Used for filtering jewellery by customer satisfaction and popularity.
+
+  - Other services (list(empty), list(str), Nullable)
+    Description: **Other services**: Stores a list of additional services offered (e.g., "Cleaning", "Repair"). | Must be an empty list or a list of strings. | Query for jewellery offering specific services or lacking them.
+
+  - Address (str, Required)
+    Description: Address: Store customer's full postal address. | String, required. Must be a valid, deliverable address. | Used for shipping, billing, and location-based marketing queries.
+
+  - Phone (str, Required)
+    Description: Phone: Customer's phone number. | Must be a valid phone number string. Can be null or empty if not provided. | Used for customer identification, contact, and targeted marketing campaigns. Queries often involve exact matches or area code filtering.
+
+  - Reviews (list(empty), Required)
+    Description: **Reviews**: Stores a list of reviews for a jewellery item. | Initially empty; reviews are added as documents to this list. | Used to retrieve all reviews for a specific item or filter reviews based on rating/author.
+
+  - Image URLs (list(empty), list(str), Required)
+    Description: Image URLs: Stores a list of URLs pointing to images of the jewellery item. | Must be an empty list or a list of valid URL strings. | Used to retrieve all images associated with a specific jewellery piece.
+
+  - City (float, str, Required)
+    Description: City: Location of jewellery store. | Type: String or Float. String for city name, Float for geohash representation. | Query by city name (string match) or proximity (geohash range).
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the customer's address. | Must be a valid 6-digit Indian PIN code. | Used for location-based analysis, delivery zone identification, and targeted marketing campaigns.
+
+  - State (float, str, Required)
+    Description: State: Represents the current state of a jewellery item (e.g., "New", "Sold", "Repaired"). | Type can be float (numerical code) or string (descriptive text). Must be a valid state as defined by the business. | Used for filtering items by their current status, like finding all "Sold" items.
+
+  - Details.Customization (str, Nullable)
+    Description: Details.Customization: Stores customization details for a jewellery item. | String; limited to 255 characters. Null if no customization. | Used to filter jewellery by specific customization requests (e.g., "engraved initials", "stone change").
+
+  - Details.Rental Jewellery (str, Nullable)
+    Description: Details.RentalJewellery: Details of jewellery available for rent. | String describing rental terms, availability, and pricing. Can be empty if not for rent. | Query for specific rental terms or availability periods.
+
+  - Details.Bridal jewellery range (str, Nullable)
+    Description: **Details.Bridal jewellery range**: Specifies the name or type of bridal jewellery range. | String, free-form text. Must be a valid range name if applicable. | Used to filter jewellery by specific bridal collections or styles.
+
+  - Details.Store Type (str, Nullable)
+    Description: Details.Store Type: Indicates the type of store selling the jewellery. | Must be a valid store type (e.g., 'Online', 'Physical', 'Pop-up'). Case-sensitive. | Used to filter jewellery by sales channel or analyze sales performance per store type.
+
+  - Location (str, Nullable)
+    Description: Location: Physical location of the jewellery item (e.g., "Warehouse A", "Storefront"). | String, required. Must be a valid, predefined location. | Used to filter jewellery by storage location or sales point.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** | Stores offered services (e.g., repair, cleaning, appraisal). Each service is a key-value pair (service name: boolean indicating availability). Must contain at least one service. | Query for jewelers offering specific services (e.g., `{"Services Offered.repair": true}`).
+
+  - Amenities (list(str), Nullable)
+    Description: Amenities: List of strings representing available amenities (e.g., "Free Cleaning", "Insurance"). | Must be a list of strings. Empty lists are allowed. | Used to filter jewellery based on offered amenities, e.g., find items with "Free Cleaning".
+
+  - Policies (list(str), Nullable)
+    Description: **Policies**: List of applicable policies (e.g., "Return Policy", "Warranty"). | Must be a list of strings. Empty lists are allowed. | Used to filter jewellery based on associated policies.
+
+  - Other Information (list(str), Nullable)
+    Description: **Other Information:** Stores a list of strings containing miscellaneous details about the jewellery piece. | Each string should be concise. No specific length limit. | Used for filtering by specific keywords or phrases related to the jewellery.
+
+
+Collection: photographers
+--------------------------------------------------
+Description: **Photographers Collection Description:**
+
+**Purpose:** Stores comprehensive data on photographers, enabling analysis of pricing, services, location, and customer reviews to understand market trends and photographer performance.
+
+**Key Fields:** `_id`, `Title`, `Location`, `Rating`, `Services Offered`, `Prices per day`, `Reviews`, `City`, `State`. `Services Offered` and `Prices per day` are nested documents detailing specific offerings and pricing structures.
+
+**Common Use Cases:** Analyzing pricing strategies, identifying popular services, mapping photographer distribution, correlating ratings with service offerings, and understanding regional market variations.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id: Unique identifier for each photographer document.** | Immutable, automatically generated ObjectId. | Used for retrieving specific photographers by ID, ensuring uniqueness across the collection.
+
+  - Title (str, Required)
+    Description: **Title:** The photographer's professional title or specialization. | String, maximum 100 characters. Required. | Used for filtering photographers by expertise (e.g., "Wedding Photographer", "Landscape Photographer").
+
+  - Location (str, Nullable)
+    Description: **Location:** Photographer's primary work location (city, state). | String, free-form text. Required. | Used for geographic searches, filtering photographers by region, and location-based recommendations.
+
+  - Rating (str, Required)
+    Description: Rating: Photographer's overall rating (e.g., "4.5 stars"). | String representing a numerical rating, typically between "1 star" and "5 stars". | Used for filtering photographers by rating range (e.g., "rating >= 4 stars") or sorting by rating.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** | Object detailing photography services (e.g., portraits, weddings). Must include a 'type' field (string) and may include price and description. | Used to filter photographers by service type or price range.
+
+  - Services Offered.Cinematography (str, Nullable)
+    Description: Services Offered.Cinematography: | A comma-separated string listing cinematography services offered (e.g., "Documentary, Commercial"). Must be a valid service type. | Used to find photographers specializing in specific cinematography styles.
+
+  - Services Offered.Traditional Photography (str, Nullable)
+    Description: Services Offered.Traditional Photography: Indicates if the photographer offers traditional photography services. | Must be a string; typically "Yes" or "No". | Used to filter photographers offering traditional photography.
+
+  - Services Offered.Traditional Video (str, Nullable)
+    Description: Services Offered.Traditional Video: Indicates if the photographer offers traditional video services. | String, either "Yes" or "No". | Query to filter photographers offering or not offering traditional video services.
+
+  - Services Offered.Albums (str, Nullable)
+    Description: Services Offered.Albums: | String listing album types offered (e.g., "Wedding, Portrait"). Must be comma-separated. | Used to filter photographers by album services offered, e.g., finding photographers who offer "Wedding" albums.
+
+  - Services Offered.Candid Photography (str, Nullable)
+    Description: Services Offered.Candid Photography: Indicates if a photographer offers candid photography services. | String, must be "Yes" or "No". | Query to find photographers specializing in candid photography (e.g., `{"Services Offered.Candid Photography": "Yes"}`).
+
+  - Services Offered.Pre wedding Photoshoot (str, Nullable)
+    Description: `Services Offered.Pre wedding Photoshoot`: Indicates if the photographer offers pre-wedding photoshoot services. | String, either "Yes" or "No". | Query to filter photographers offering pre-wedding photoshoots (e.g., `{"Services Offered.Pre wedding Photoshoot": "Yes"}`).
+
+  - Amenities (list(str), Nullable)
+    Description: Amenities: List of amenities offered by the photographer (e.g., "Studio", "Props", "Makeup Artist"). | Must be a list of strings. Empty lists are allowed. | Used to filter photographers based on offered amenities.
+
+  - Policies (list(str), Nullable)
+    Description: **Policies**: List of strings representing photographer's accepted policies (e.g., "Cancellation", "Rescheduling"). | Must be a list of strings. | Used to filter photographers based on specific policy acceptance.
+
+  - Other Information (list(str), Nullable)
+    Description: **Other Information**: Miscellaneous details about the photographer. | List of strings; each string should be concise. | Used to find photographers based on specific, less structured criteria (e.g., "Specializes in pet photography", "Offers retouching services").
+
+  - Image URLs (list(str), Required)
+    Description: Image URLs: Stores a list of URLs pointing to a photographer's portfolio images. | Must be valid URLs. Can be empty. | Used to retrieve all images for a photographer or filter photographers based on specific image URLs.
+
+  - Address (str, Required)
+    Description: Address: Photographer's physical address. | String, free-form text. Should be a valid, deliverable address. | Used for location-based searches, proximity queries, and displaying photographer location on maps.
+
+  - Phone (str, Required)
+    Description: Phone: Photographer's primary contact number. | Must be a valid phone number string. Can be null if unavailable. | Used for contacting photographers, filtering by area code, or searching for specific numbers.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an empty list of review objects for a photographer. | Initially empty; reviews are added as they are submitted. | Used to find photographers with no reviews yet, or to initialize the field.
+
+  - City (str, Required)
+    Description: City: Photographer's primary city of operation. | String, required. Must be a valid city name. | Used for location-based searches, filtering photographers by region, and geographic analysis.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the photographer's address. | Must be a valid 6-digit Indian postal code. | Used for location-based searches, filtering photographers by region, and proximity queries.
+
+  - State (str, Required)
+    Description: State: The U.S. state where the photographer is located. | Must be a valid two-letter U.S. state abbreviation (e.g., "CA"). | Used for filtering photographers by location, e.g., finding photographers in "NY".
+
+  - Complete Location (str, Nullable)
+    Description: Complete Location: Full address string of the photographer's primary business location. | Must be a valid address string. | Used for location-based searches, proximity queries, and geographic analysis.
+
+  - Prices per day (object, Nullable)
+    Description: **Prices per day:** | Object containing photographer's daily rates for different photography types (e.g., weddings, portraits). Values must be non-negative numbers. | Used to filter photographers by price range for specific photography types.
+
+  - Prices per day.Photo Package (str, Nullable)
+    Description: Prices per day.Photo Package: | String representing the price for a photo package per day. Must be a valid numerical string. | Used to filter photographers by price range for specific photo packages.
+
+  - Prices per day.Photo + Video (str, Nullable)
+    Description: Prices per day.Photo + Video: String representing the photographer's daily rates for combined photo and video services. | Must be a valid price description (e.g., "From $500", "$750 - $1000"). | Used to filter photographers by price range for combined services.
+
+  - Details (object, Nullable)
+    Description: **Details**: Photographer's specific information. | Object containing fields like `equipment`, `style`, and `experience`. Must be a valid JSON object. | Query for photographers based on `equipment` or `style` preferences.
+
+  - Details.Offerings (str, Nullable)
+    Description: Details.Offerings: A comma-separated string listing photography services offered (e.g., "Weddings, Portraits, Events"). | Must be a valid string. | Used to filter photographers by service type, e.g., find photographers offering "Weddings".
+
+  - Details.Payment terms (str, Nullable)
+    Description: Details.Payment_terms: Contractual payment agreement between photographer and client. | String, free-form text. Should describe payment schedule, methods, and any late fees. | Query to filter photographers based on accepted payment terms or to analyze common payment arrangements.
+
+  - Details.Travel Cost (str, Nullable)
+    Description: Details.Travel Cost: Photographer's travel expenses. | String representing the cost (e.g., "50 USD", "Negotiable"). Must include currency. | Query for photographers within a specific travel cost range or those offering "Free" travel.
+
+  - Details.Budget (Photo Package) (str, Nullable)
+    Description: Details.Budget (Photo Package): Estimated budget allocated for the photo package. | String representing a monetary value or range. Must be a valid currency format. | Query for packages within a specific budget range or exceeding a certain threshold.
+
+  - Details.Price (Photo + Video) (str, Nullable)
+    Description: Details.Price (Photo + Video): Price for a combined photography and videography package. | String representing a numerical value, potentially including currency symbols. Must be a valid price. | Query for photographers offering packages within a specific price range.
+
+  - Details.Most Booked Package (str, Nullable)
+    Description: Details.Most Booked Package: Stores the name of the photographer's most frequently booked package. | String, case-sensitive. Must be a valid package name offered by the photographer. | Used to identify popular packages and filter photographers by package preference.
+
+  - Details.Small Function Price (str, Nullable)
+    Description: Details.Small Function Price: Price for a small function photography package. | String representing a numerical value; must be a valid price format. | Used to filter photographers by price range for small functions.
+
+  - Details.Delivery Time (str, Nullable)
+    Description: **Details.Delivery Time:** Estimated time (e.g., "2-3 weeks") for photo delivery. | String format. Must be a reasonable timeframe. | Used to filter photographers by delivery speed or display estimated delivery times to clients.
+
+  - Other services (list(empty), list(str), Nullable)
+    Description: **Other services:** Additional services offered by the photographer. | List of strings, can be empty if no other services are offered. | Query for photographers offering specific services (e.g., "photo editing").
+
+  - Details.Albums (str, Nullable)
+    Description: Details.Albums: Stores a comma-separated string of album titles associated with a photographer. | Titles must be valid strings. | Used to find photographers associated with specific albums or to list all albums a photographer has worked on.
+
+
+Collection: djs
+--------------------------------------------------
+Description: **DJs Collection Description:**
+
+Collection 'djs' stores information about DJs, likely for a platform connecting DJs with clients. | Key fields include `Title`, `Location`, `Rating`, `Services Offered`, `Starting Package Price`, `Reviews`, `City`, `State`, and `Details.Favourite Music Genres`. | Common use cases involve analyzing DJ popularity by location and genre, identifying price trends, correlating ratings with services offered, and understanding customer sentiment through review analysis. The `Location` and `Services Offered` fields are crucial for segmentation and targeted recommendations.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id: Unique document identifier** | Immutable, automatically generated ObjectId. Ensures uniqueness within the 'djs' collection. | Used for efficient document retrieval by ID, updates, and deletions.
+
+  - Title (str, Required)
+    Description: Title: DJ set title. | String, required, max length 255 characters. Must be unique within the collection. | Used for searching sets by name, displaying set titles, and preventing duplicate entries.
+
+  - Location (str, Nullable)
+    Description: Location: DJ's primary performance location. | String representing city, venue, or region. Must be a valid, searchable location. | Used for location-based DJ searches and event planning.
+
+  - Rating (str, Required)
+    Description: Rating: User-assigned rating for a DJ. | String value, typically "1" to "5" (star rating). Can be null if unrated. | Used to filter DJs by minimum rating or sort by rating.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** | Object detailing DJ services (e.g., music genres, equipment provided). Must contain at least one service. | Query for DJs offering specific services or equipment, or filter by genre expertise.
+
+  - Amenities (list(str), Nullable)
+    Description: Amenities: List of amenities offered by a DJ. | Must be a list of strings. Empty lists are allowed. | Used to filter DJs based on specific amenities offered (e.g., "lighting", "smoke machine").
+
+  - Policies (list(str), Nullable)
+    Description: **Policies**: List of policy names (strings) associated with a DJ. | Must be valid policy names. | Used to filter DJs based on specific policy requirements.
+
+  - Other Information (list(str), Nullable)
+    Description: **Other Information:** Stores miscellaneous, unstructured details about a DJ. | List of strings; each string is < 255 characters. Can be empty. | Used for keyword searches or filtering based on specific, non-standard attributes.
+
+  - Image URLs (list(empty), list(str), Required)
+    Description: **Image URLs:** Stores a list of image URLs associated with a DJ. | Must be an empty list or a list of valid URL strings. | Used to retrieve all images for a specific DJ or find DJs with no associated images (empty list).
+
+  - Address (str, Required)
+    Description: Address: Physical address of the DJ. | String, free-form, but should be valid and deliverable. | Used for location-based queries, proximity searches, and geographic analysis.
+
+  - Phone (str, Required)
+    Description: Phone: DJ's phone number. | Must be a valid phone number string. Can be null or empty if unavailable. | Used for contacting DJs, filtering by area code, or searching for specific numbers.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores a list of review objects (currently empty). | Initially empty; will contain review documents related to the DJ. | Used to find DJs with specific review characteristics once populated.
+
+  - City (float, str, Required)
+    Description: City: Represents the DJ's primary city of operation. | Can be a string (city name) or float (geo-location code). Must be a valid city or geo-code. | Used for location-based DJ searches and market analysis.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the DJ's location. | Must be a valid string representing a postal code format (e.g., 5-digit US ZIP code). | Used for location-based queries, filtering DJs by region, and proximity searches.
+
+  - State (float, str, Required)
+    Description: **State**: Represents the state of a DJ (e.g., 'Active', 'Inactive', or a numerical rating). | Accepts string or float values. | Used to filter DJs by activity status or performance level.
+
+  - Services Offered.Starting Package Price (str, Nullable)
+    Description: Services Offered.Starting Package Price: DJ services starting package price. | String representing a monetary value (e.g., "$500"). Must be a valid price format. | Used to filter DJs by price range or find the most affordable options.
+
+  - Complete Location (str, Nullable)
+    Description: **Complete Location:** Full address string representing the DJ's location. | Must be a valid address; may include street, city, state, and zip code. | Used for location-based searches, proximity queries, and geographic filtering of DJs.
+
+  - Starting Price (object, Nullable)
+    Description: **Starting Price:** Initial price offered for a DJ service. | Must be a positive number. Represents USD currency. | Used to filter DJs by price range or find the lowest starting price.
+
+  - Starting Price.Starting Prices (str, Nullable)
+    Description: **Starting Price.Starting Prices**: Initial asking price for a DJ's services. | String representation of the price; format may vary. | Used to filter DJs by price range or specific starting price.
+
+  - Details (object, Nullable)
+    Description: Default description for Details: Field of type object in collection djs.
+  - Details.Starting Prices (str, Nullable)
+    Description: Details.StartingPrices: Starting prices for DJ services. | String representation of price range (e.g., "$500-$1000"). Must be a valid price range format. | Used to filter DJs by price point or display price information.
+
+  - Details.Favourite Music Genres (str, Nullable)
+    Description: **Details.Favourite Music Genres**: Stores a comma-separated string of a DJ's preferred music genres. | Must be a valid string. No length limit enforced. | Used to filter DJs by genre preference for booking or discovery.
+
+  - Details.Experience (str, Nullable)
+    Description: Details.Experience: Free-form text describing a DJ's experience. | No enforced format. | Used to find DJs with specific experience types (e.g., "wedding DJ", "club experience") or experience levels.
+
+  - Other services (list(empty), Nullable)
+    Description: **Other services:** | An empty list intended for future storage of additional services offered to DJs. Currently unused. | Querying this field will always return documents where the list is empty.
+
+
+Collection: bridal_wear
+--------------------------------------------------
+Description: Bridal wear vendors listing | `_id`, `Title`, `Complete Location`, `Starting Price`, `Rating`, `City`, `State`, `Services Offered`, `Image URLs`, `Reviews` | This collection stores information about bridal wear vendors, enabling analysis of pricing trends, location-based popularity, service offerings, customer ratings, and review sentiment. Key fields like `City`, `State`, `Starting Price`, and `Rating` facilitate geographic and price-point based segmentation and performance analysis. The `Reviews` and `Image URLs` fields allow for qualitative analysis of customer feedback and visual merchandising strategies.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id**: Unique identifier for each bridal wear document. | Immutable, automatically generated ObjectId. | Used for retrieving specific bridal wear items, efficient indexing, and referencing related documents.
+
+  - Title (str, Required)
+    Description: Title: Name of the bridal wear item. | String, required, max length 100 characters. Must be unique within the collection. | Used for searching, filtering, and displaying item names.
+
+  - Complete Location (str, Nullable)
+    Description: Complete Location: Full address string of the bridal wear store. | Must be a valid, human-readable address. | Used for location-based searches, proximity queries, and displaying store addresses on maps.
+
+  - Starting Price (object, Nullable)
+    Description: **Starting Price:** Represents the lowest price point for a bridal wear item. | Must be a positive number (USD). | Used to filter items within a price range or find the most affordable options.
+
+  - Starting Price.Starting Price (str, Nullable)
+    Description: Starting Price.Starting Price: The initial price of a bridal wear item. | Must be a valid string representation of a numerical value. | Used for filtering items within a price range or sorting by starting price.
+
+  - Details (object, Nullable)
+    Description: **Details**: Stores specific attributes of a bridal wear item. | Object containing key-value pairs; keys are attribute names (e.g., "Neckline", "Sleeve Length"), values are strings. | Used to filter bridal wear by specific attributes like neckline or sleeve length.
+
+  - Details.Outfit Type (str, Nullable)
+    Description: Details.Outfit Type: Specifies the type of bridal outfit (e.g., Gown, Lehenga, Suit). | String value; must be a predefined, controlled vocabulary (e.g., from a lookup table). | Used to filter outfits by type, e.g., finding all "Gown" type outfits.
+
+  - Details.Years since established (str, Nullable)
+    Description: **Details.Years since established**: Years the bridal wear business has been operating. | Must be a non-negative integer string. | Used to filter businesses by age or analyze trends over time.
+
+  - Details.Store Type (str, Nullable)
+    Description: **Details.Store Type**: Indicates the type of store selling the bridal wear. | Must be a valid store type (e.g., 'Boutique', 'Department Store', 'Online Retailer'). | Used to filter bridal wear by store type, e.g., finding items sold only in boutiques.
+
+  - Rating (str, Required)
+    Description: Rating: Average customer rating for a bridal wear item. | String representation of a numerical value (e.g., "4.5"). Must be a valid number. | Used for filtering items by popularity or sorting by customer satisfaction.
+
+  - Other services (list(empty), list(str), Nullable)
+    Description: **Other services:** List of additional services offered (e.g., alterations, steaming). | Must be an empty list or a list of strings. | Query for bridal wear shops offering specific services or those with no additional services.
+
+  - Address (str, Required)
+    Description: Address: Physical location of the bridal wear store. | Must be a valid street address. Cannot be empty. | Used for location-based searches, proximity queries, and delivery address verification.
+
+  - Phone (str, Required)
+    Description: **Phone:** Contact phone number of the customer. | Must be a valid phone number string. | Used for contacting customers, filtering by area code, or identifying duplicate entries.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an empty list of review objects for each bridal wear item. | Initially empty; reviews are added dynamically. | Used to retrieve all reviews for a specific bridal wear item after reviews are added.
+
+  - Image URLs (list(empty), list(str), Required)
+    Description: **Image URLs:** Stores a list of URLs pointing to images of the bridal wear item. | Can be an empty list if no images are available. URLs must be valid strings. | Used to retrieve all images associated with a specific bridal wear item.
+
+  - City (str, Required)
+    Description: City: Location of the bridal wear store. | String, representing a valid city name. Required. | Used for location-based queries, e.g., finding stores in "New York" or filtering by city.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the customer's address. | Must be a valid 6-digit Indian postal code. | Used for location-based analytics, delivery zone identification, and targeted marketing campaigns.
+
+  - State (str, Required)
+    Description: State: US state where the bridal wear item is located. | Must be a valid two-letter US state abbreviation (e.g., "CA"). | Used for location-based searches, filtering by state availability, and regional sales analysis.
+
+  - Details.Outfit type available (str, Nullable)
+    Description: **Details.Outfit type available**: Specifies the type of bridal outfit available (e.g., "Gown", "Lehenga", "Saree"). | Must be a valid outfit type from a predefined list. | Used to filter bridal wear by outfit type, e.g., finding all "Gowns".
+
+  - Details.What year did your store start in (str, Nullable)
+    Description: **Details.What year did your store start in**: The year the bridal wear store commenced operations. | Must be a valid year (YYYY) as a string. | Used to filter stores by establishment date, analyze trends over time, or identify newer/older businesses.
+
+  - Details.Customization (str, Nullable)
+    Description: Details.Customization: Stores customization details for the bridal wear. | String; free-text description of alterations or bespoke elements. Max length: 255 characters. | Used to filter bridal wear based on specific customization requests or features.
+
+  - Location (str, Nullable)
+    Description: Location: Store location of the bridal wear item. | String, representing a physical store or warehouse location. Required. | Used for querying items available at a specific location or within a region.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** Details the services provided (e.g., alterations, styling). | Object containing boolean flags for each service. At least one service must be true if the document represents a bridal wear provider. | Used to filter providers based on specific service availability.
+
+  - Amenities (list(str), Nullable)
+    Description: Amenities: List of strings representing available amenities (e.g., "Alterations", "Styling"). | Must be a list of strings. Empty lists are allowed. | Used to filter bridal wear based on offered amenities.
+
+  - Policies (list(str), Nullable)
+    Description: Policies: List of applicable store policies (e.g., "Return Policy", "Alteration Policy"). | Must be a string array. | Used to filter bridal wear based on specific policy availability.
+
+  - Other Information (list(empty), list(str), Nullable)
+    Description: **Other Information:** | Stores a list of strings for miscellaneous details not covered by other fields. Can be an empty list. | Query for specific keywords or phrases related to the bridal wear.
+
+  - Services Offered.Bridal Lehnga (str, Nullable)
+    Description: **Services Offered.Bridal Lehnga:** Indicates specific bridal lehnga services offered (e.g., "Custom Design," "Alteration," "Rental"). | String values; multiple services can be concatenated or stored in an array. | Query to filter bridal wear providers offering specific lehnga services.
+
+  - Services Offered.Light Lehnga (str, Nullable)
+    Description: Services Offered.Light Lehnga: Indicates if light lehnga services are offered. | String, typically "Yes" or "No". Case-insensitive. | Query to filter bridal wear based on availability of light lehnga services (e.g., find all bridal wear services that offer light lehngas).
+
+  - Services Offered.Gown (str, Nullable)
+    Description: Services Offered.Gown: Indicates gown-related services provided (e.g., "Alteration", "Cleaning", "Rental"). | String value. Must be a valid service type. | Used to filter bridal wear based on available gown services.
+
+  - Services Offered.Anarkali (str, Nullable)
+    Description: Services Offered.Anarkali: Lists services available for Anarkali bridal wear (e.g., "Stitching", "Embroidery", "Customization"). | String values. Must be a comma-separated list of valid service options. | Used to filter Anarkalis based on offered services.
+
+  - Services Offered.Saree (str, Nullable)
+    Description: Services Offered.Saree: Details saree-related services (e.g., draping, alterations). | String; Free-form text. | Used to filter bridal wear packages by specific saree services offered.
+
+  - Services Offered.Indo-Western (str, Nullable)
+    Description: Services Offered.Indo-Western: Indicates if Indo-Western bridal wear services are offered. | String, typically "Yes" or "No". Case-insensitive. | Used to filter bridal wear services based on Indo-Western style availability.
+
+
+Collection: honeymoon
+--------------------------------------------------
+Description: Honeymoon packages | Title, Location, Rating, City, State, Reviews | This collection stores information on honeymoon packages, enabling analysis of popular destinations, rating trends, service offerings, and customer sentiment based on reviews. Location (City, State) is key for geographic analysis, while Rating and Reviews provide insights into package quality and customer satisfaction. Analysis can inform marketing strategies, package optimization, and identify areas for service improvement.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id**: Unique identifier for each honeymoon document. | Immutable, automatically generated ObjectId. | Used for efficient document retrieval by ID, range queries, and ensuring data integrity.
+
+  - Title (str, Required)
+    Description: **Title:** The title of the honeymoon package. | String, required, maximum 100 characters. Must be unique. | Used for searching, filtering, and displaying honeymoon packages.
+
+  - Location (str, Required)
+    Description: Location: Destination of the honeymoon. | String representing a city, region, or specific venue. Must be a valid, recognizable place. | Used for filtering honeymoons by destination, e.g., finding trips to "Paris" or "Hawaii".
+
+  - Rating (str, Required)
+    Description: Rating: User-assigned rating of the honeymoon destination. | String value representing a rating (e.g., "Excellent", "Good", "Average", "Poor"). Must be a valid rating option. | Used to filter destinations by user satisfaction or calculate average ratings.
+
+  - Services Offered (object, Required)
+    Description: **Services Offered:** | Stores details about services included in the honeymoon package (e.g., spa, tours). Must be a valid JSON object. | Used to filter honeymoons based on specific service inclusions or to analyze service popularity.
+
+  - Amenities (list(str), Required)
+    Description: Amenities: List of strings representing available amenities at the honeymoon destination. | Must be a list of strings. Empty lists are allowed. | Used to filter destinations based on desired amenities (e.g., "pool", "spa", "beach access").
+
+  - Policies (list(str), Required)
+    Description: **Policies**: List of applicable policies (e.g., "Cancellation", "Pet-Friendly"). | Must be a list of strings. | Used to filter honeymoons based on specific policy requirements.
+
+  - Other Information (list(str), Required)
+    Description: **Other Information**: Free-form list of strings for additional details not captured elsewhere. | No enforced format. Max list size: 10. | Query for specific keywords or phrases related to the honeymoon.
+
+  - Image URLs (list(empty), list(str), Required)
+    Description: **Image URLs:** Stores a list of URLs pointing to images related to the honeymoon. | Can be an empty list or a list of strings. | Query to retrieve all image URLs associated with a specific honeymoon.
+
+  - Address (str, Required)
+    Description: Address: Physical address of the honeymoon location. | Must be a valid, complete address string. | Used for location-based queries, proximity searches, and displaying location details.
+
+  - Phone (str, Required)
+    Description: Phone: Honeymooner's phone number. | Must be a valid phone number string. Can be null. | Used for contacting honeymooners, e.g., `{$text: {$search: "phone number"}}` or exact match queries.
+
+  - Reviews (list(empty), Required)
+    Description: **Reviews**: Stores a list of reviews for a honeymoon package. | Initially empty; reviews are added as they are submitted. | Query for honeymoon packages with a specific number of reviews or to retrieve all reviews associated with a package.
+
+  - City (float, str, Required)
+    Description: City: Honeymoon destination city. | Accepts string values for city names or float values for geographical coordinates (latitude). | Used for filtering destinations by name or proximity via geo-queries.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the honeymoon destination. | Must be a valid postal code string. | Used for location-based queries, filtering by region, and proximity searches.
+
+  - State (float, str, Required)
+    Description: **State**: Represents the state of the honeymoon (e.g., "Planning", "Ongoing", "Completed"). | Type can be float (representing a numerical code) or string (representing the state name). | Used for filtering honeymoons by their current state, or analyzing state transitions.
+
+
+Collection: car
+--------------------------------------------------
+Description: **Car Collection Description:**
+
+**Purpose:** Stores comprehensive information about car rental listings, facilitating analysis of car availability, pricing, and customer satisfaction.
+
+**Key Fields:** `Title`, `Location`, `Rating`, `Services Offered`, `Amenities`, `City`, `State`, `Reviews`. `_id` serves as the unique identifier. Location data (`City`, `State`, `PinCode`) enables geographic analysis. `Reviews` and `Rating` are crucial for sentiment analysis.
+
+**Common Use Cases:** Identifying popular car models, analyzing regional pricing trends, assessing the impact of amenities on ratings, and understanding customer preferences based on reviews.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id**: Unique identifier for each car document. | Immutable, automatically generated ObjectId. | Used for direct document retrieval, indexing, and efficient lookups based on a known ID.
+
+  - Title (str, Required)
+    Description: Title: Vehicle title or descriptive name. | String, required. Should be concise and informative. | Used for searching, filtering, and displaying car listings (e.g., "Red 2020 Honda Civic").
+
+  - Location (str, Required)
+    Description: Location: Car's geographical location (city, state). | Must be a valid city and state string. | Used for proximity searches, regional analysis, and filtering cars by location.
+
+  - Rating (str, Required)
+    Description: Rating: User-assigned car rating (e.g., "Excellent", "Good", "Fair", "Poor"). | Must be a string. Case-insensitive comparisons are recommended. | Used for filtering cars by user satisfaction or grouping by rating category.
+
+  - Services Offered (object, Required)
+    Description: **Services Offered:** Represents services available for the car (e.g., maintenance, detailing). | Object containing boolean flags for each service. Defaults to `false` if a service is not offered. | Query for cars offering specific services (e.g., `{"Services Offered.maintenance": true}`).
+
+  - Amenities (list(str), Required)
+    Description: **Amenities**: List of strings representing car features (e.g., "Sunroof", "Navigation"). | Must be a list of strings. Empty lists are allowed. | Used to filter cars based on desired features.
+
+  - Policies (list(str), Required)
+    Description: **Policies**: List of insurance policy identifiers associated with the car. | Must be valid policy IDs. Can be empty if no policies are active. | Used to find cars covered by specific policies or to list policies for a car.
+
+  - Other Information (list(str), Required)
+    Description: **Other Information**: Stores miscellaneous details about the car. | String array; each element is a single, free-form text note. | Used to find cars with specific, non-standard features or conditions (e.g., "New tires", "Minor scratch on bumper").
+
+  - Image URLs (list(empty), list(str), Required)
+    Description: **Image URLs:** Stores a list of URLs pointing to car images. | Must be a list of strings or an empty list. | Used to retrieve all images associated with a specific car or find cars with no associated images (empty list).
+
+  - Address (str, Required)
+    Description: Address: The street address where the car is typically parked or garaged. | Must be a valid street address string. | Used for location-based queries, proximity searches, and geographic analysis of car distribution.
+
+  - Phone (str, Required)
+    Description: Phone: Contact phone number of the car owner. | Must be a valid phone number string. | Used for contacting owners, filtering by area code, or identifying duplicate entries.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores user reviews for a car. | Initially empty list. Reviews are added as users submit them. | Query to find cars with no reviews (empty list) or to check if a car has any reviews.
+
+  - City (float, str, Required)
+    Description: `City`: Represents the city where the car is located. | Data type can be a string (city name) or float (geospatial coordinates). Must be a valid city name or coordinate pair. | Used for location-based queries, such as finding cars within a specific city or radius.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the car owner's address. | Must be a valid 6-digit Indian postal code. | Used for location-based queries, demographic analysis, and targeted marketing.
+
+  - State (float, str, Required)
+    Description: **State:** Represents the car's condition. | Can be a float (e.g., 4.5 for "good") or a string (e.g., "new", "used"). | Used for filtering cars by condition, e.g., finding "new" cars or those with a state above 3.0.
+
+
+Collection: astro
+--------------------------------------------------
+Description: The 'astro' collection stores information about astrologers and related services, likely for a platform connecting users with astrological guidance. | Key fields include `Title`, `Complete Location`, `Starting Price`, `Details` (containing various pricing and service details), `Rating`, `Reviews`, `City`, and `State`. | Common use cases involve analyzing pricing trends, geographic distribution of astrologers, service popularity based on reviews and ratings, and identifying correlations between experience, services offered, and customer satisfaction. The nested `Details` field requires careful parsing for comprehensive analysis.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id: Unique document identifier** | Immutable, automatically generated ObjectId. Ensures uniqueness within the 'astro' collection. | Used for efficient document retrieval by ID, range queries, and indexing.
+
+  - Title (str, Required)
+    Description: Title: The title of an astronomical object. | String, required, must be descriptive. | Used for searching, filtering, and displaying object information. Example queries: find by exact title, or titles containing specific keywords.
+
+  - Complete Location (str, Nullable)
+    Description: Complete Location: Full address string representing the astronomical observation site. | Must be a valid, human-readable address. | Used for location-based queries, e.g., finding observations near a specific city or region.
+
+  - Starting Price (object, Nullable)
+    Description: **Starting Price:** Represents the initial price of an astronomical object. | Must be a positive number. | Used for filtering objects by price range or finding the least expensive object.
+
+  - Starting Price.Pricing for Wedding (str, Nullable)
+    Description: Starting Price.Pricing for Wedding: The minimum price offered for wedding photography services. | Must be a valid string representing a numerical value (e.g., "1500"). | Used to filter photographers by price range for wedding packages.
+
+  - Details (object, Nullable)
+    Description: **Details**: Stores supplementary information about an astronomical object. | Must be a valid JSON object; schema is flexible but should contain key-value pairs. | Used for filtering by specific properties like magnitude or spectral type.
+
+  - Details.Charges for Pre-Wedding (Roka) Puja/Hawan (str, Nullable)
+    Description: Details.Charges for Pre-Wedding (Roka) Puja/Hawan: Charges levied for conducting Roka Puja/Hawan. | String representing the cost; can be empty if not applicable. | Query to filter by price range or identify services offered.
+
+  - Details.Pricing for Sagan Puja/Hawan (str, Nullable)
+    Description: Details.Pricing for Sagan Puja/Hawan: Stores pricing information for Sagan Puja/Hawan services. | String format, may include currency symbols and price ranges. Must be present if the service is offered. | Used to filter services by price range or retrieve pricing details.
+
+  - Details.Languages (str, Nullable)
+    Description: Details.Languages: Languages spoken by the astronaut. | String array. Must contain valid language codes (e.g., "en", "fr"). | Used to filter astronauts by language proficiency for mission assignments or communication needs.
+
+  - Details.Culture (str, Nullable)
+    Description: Details.Culture: The cultural origin or context associated with the astronomical object. | String value, may be null if unknown. | Used for filtering objects based on cultural significance or origin, e.g., finding objects significant to Greek mythology.
+
+  - Details.Experience (str, Nullable)
+    Description: Details.Experience: Free-form text describing the astronaut's professional experience. | Limited to 255 characters. | Used to filter astronauts by specific skills or career history, e.g., "pilot," "engineer," or "mission commander."
+
+  - Details.Services Offered (str, Nullable)
+    Description: **Details.Services Offered:** A comma-separated string listing the services offered by the astro object. | Must be a valid string. | Used to filter astro objects by specific service offerings.
+
+  - Details.Samagri (str, Nullable)
+    Description: Details.Samagri: List of materials (samagri) required for a specific astrological ritual. | String; free-form text. Must be accurate and complete. | Query for rituals needing specific materials, or to filter by samagri type.
+
+  - Details.Pricing for Wedding (str, Nullable)
+    Description: Details.Pricing for Wedding: Stores pricing information specific to wedding events. | String format varies (e.g., "Package A - $5000"). Must be present if event type is "Wedding". | Used to filter events by price range or package details.
+
+  - Details.Pricing for Kundli matching/Astrology (Per person) (str, Nullable)
+    Description: Details.Pricing for Kundli matching/Astrology (Per person): Stores the pricing information (as a string) for Kundli matching or astrology services offered per individual. | Must be a valid price description (e.g., "₹500", "$10", "Free"). | Used to filter services by price range or specific price points.
+
+  - Rating (str, Required)
+    Description: Rating: User-assigned rating for an astronomical object. | String value, typically "Excellent", "Good", "Average", "Poor". Case-insensitive. | Used for filtering objects by user preference or calculating average ratings.
+
+  - Other services (list(empty), list(str), Nullable)
+    Description: **Other services**: Stores a list of other services offered by an astronomical entity. | Must be an empty list or a list of strings. | Query to find entities offering specific combinations of services.
+
+  - Address (str, Required)
+    Description: Address: Physical location of an astronomical object. | String, free-form text. Must be a valid, recognizable address. | Used for proximity searches, mapping, and correlating observations with location-specific data.
+
+  - Phone (str, Required)
+    Description: Phone: Contact phone number. | String, must conform to a standard phone number format (e.g., E.164). | Used for contacting users, querying by phone number for account lookup or verification.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an empty list of review objects for an astronomical object. | Initially empty; populated later. | Used to find objects with no reviews yet, or to prepare for review insertion.
+
+  - Image URLs (list(str), Required)
+    Description: **Image URLs:** Stores a list of URLs pointing to images associated with an astronomical object. | Must be valid URLs. List can be empty. | Used to retrieve all images for a specific object or filter objects based on image availability.
+
+  - City (float, str, Required)
+    Description: City: Represents the city where an astronomical observation was made. | Can be a string (city name) or float (city ID). Must be a valid city or ID. | Used for filtering observations by location, e.g., finding observations from "London" or city ID 123.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the address. | Must be a valid 6-digit Indian PIN code. | Used for location-based queries, delivery zone identification, and demographic analysis.
+
+  - State (float, str, Required)
+    Description: **State**: Represents the operational state of an astronomical instrument. | Can be a float (numerical code) or a string (descriptive text). Must be a valid state code or descriptive string. | Used for filtering instruments by operational status, e.g., finding instruments in "active" or "error" states.
+
+  - Starting Price.Starting Price (str, Nullable)
+    Description: **Starting Price.Starting Price**: Initial listed price of an astrological service. | Must be a valid string representation of a price. | Used to filter services by price range or find the lowest/highest starting price.
+
+  - Location (str, Nullable)
+    Description: Location: Observational site name. | Must be a valid, existing location name. | Used for filtering observations by site, e.g., finding all data from "Mauna Kea".
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** | Object detailing services provided (e.g., "planetary imaging", "telescope rental"). Contains service name and associated details. Must have at least one service. | Used to filter by specific service availability or retrieve details about offered services.
+
+  - Amenities (list(str), Nullable)
+    Description: **Amenities**: List of strings representing available property features (e.g., "pool", "gym"). | Must be a list of strings. Empty lists are allowed. | Used to filter properties based on desired amenities.
+
+  - Policies (list(str), Nullable)
+    Description: **Policies**: List of applicable policy identifiers. | Must be valid policy IDs; can be empty. | Used to filter documents based on specific policy associations or lack thereof.
+
+  - Other Information (list(empty), Nullable)
+    Description: **Other Information:** Stores an empty list for potential future use. | Currently, the list must remain empty. | Reserved for future queries based on added data.
+
+
+Collection: catering
+--------------------------------------------------
+Description: **Catering Collection Description:**
+
+Catering collection stores information about catering services, enabling analysis of pricing, service offerings, and customer reviews to understand market trends and caterer performance. | Key fields include: `Title`, `Complete Location`, `Starting Price`, `Details.Cuisines`, `Rating`, `Reviews`, `City`, `State`, `Services Offered`. | Common use cases involve identifying popular cuisines, price optimization strategies, geographic demand analysis, and correlating ratings with service features. The `Details` field contains nested information for granular analysis.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id**: Unique identifier for each catering document. | Immutable, automatically generated ObjectId. | Used for efficient document retrieval by ID, range queries, and indexing.
+
+  - Title (str, Required)
+    Description: Title: Catering package title | String, required, unique. Max length 100 characters. | Used for searching, filtering, and displaying catering packages.
+
+  - Complete Location (str, Nullable)
+    Description: **Complete Location:** Full address of the catering event. | Must be a valid, human-readable address string. | Used for location-based searches, proximity queries, and event planning logistics.
+
+  - Starting Price (object, Nullable)
+    Description: **Starting Price:** Represents the lowest price a catering service offers. | Must be a positive number. | Used to filter catering services by price range or find the most affordable options.
+
+  - Starting Price.Veg Price per plate (str, Nullable)
+    Description: Starting Price.Veg Price per plate: Starting price for a vegetarian plate. | Must be a string representing a numerical value (e.g., "10.00"). Represents price in INR. | Used to filter catering options by price range for vegetarian meals.
+
+  - Details (object, Nullable)
+    Description: Details: Stores catering-specific information. | Contains fields like `menu`, `allergies`, `guestCount`. `menu` is required. | Used to filter catering orders by menu items, dietary restrictions, or guest count.
+
+  - Details.Veg Price per plate (str, Nullable)
+    Description: Details.Veg Price per plate: Price of a vegetarian meal per plate. | Must be a valid numerical string (e.g., "12.50"). Cannot be negative. | Used for calculating total vegetarian meal costs, filtering by price range, and reporting average prices.
+
+  - Details.Starting Plate Non Veg (str, Nullable)
+    Description: Details.Starting Plate Non Veg: Specifies the non-vegetarian starting plate offered. | Must be a valid string representing a menu item. Can be empty if no non-veg option is offered. | Used to filter catering orders based on specific non-veg starting plate selections.
+
+  - Details.Max Capacity (str, Nullable)
+    Description: Details.Max Capacity: Maximum number of people the catering service can accommodate. | Must be a string representing a positive integer. | Used to filter catering services based on capacity requirements for events.
+
+  - Details.Cuisines (str, Nullable)
+    Description: Details.Cuisines: Stores a comma-separated string of cuisines offered. | Must be a valid cuisine type. | Used to filter catering services by cuisine, e.g., finding caterers offering "Italian, Mexican".
+
+  - Details.Caterer Type (str, Nullable)
+    Description: **Details.Caterer Type**: Specifies the type of catering service (e.g., 'Restaurant', 'Independent'). | Must be a string. Standardized values preferred for consistency. | Used to filter catering options by service type, e.g., finding all 'Restaurant' caterers.
+
+  - Details.Min Capacity (str, Nullable)
+    Description: Details.Min Capacity: Minimum number of guests a catering service can handle. | Must be a positive integer represented as a string. | Used to filter catering services based on event size requirements.
+
+  - Rating (str, Required)
+    Description: Rating: Customer-provided rating of the catering service. | String value representing a rating (e.g., "Excellent", "Good", "Average", "Poor"). Must be a valid rating option. | Used to filter catering services by customer satisfaction levels.
+
+  - Other services (list(empty), list(str), Nullable)
+    Description: **Other services**: Optional catering services offered (e.g., setup, cleanup). | List of strings, can be empty. | Query for caterers offering specific services or those with no additional services listed.
+
+  - Address (str, Required)
+    Description: Address: Physical location of the catering service. | Must be a valid street address. Cannot be empty. | Used for proximity searches, filtering by service area, and displaying location information.
+
+  - Phone (str, Required)
+    Description: Phone: Contact phone number for catering orders. | Must be a valid phone number string. Required for order confirmation. | Used for querying by customer contact information or specific orders.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an empty list of review objects for a catering service. | Initially empty; reviews are added as they are received. | Used to find catering services with no reviews yet, or to prepare for review aggregation.
+
+  - Image URLs (list(empty), list(str), Required)
+    Description: **Image URLs:** Stores a list of URLs pointing to images related to a catering service. | Can be an empty list or contain string URLs. | Used to retrieve images for display or filtering catering services by available visuals.
+
+  - City (str, Required)
+    Description: **City**: The city where the catering service is located. | String, required. Must be a valid city name. | Used for location-based searches, filtering caterers by service area, and geographic analysis.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the catering service area. | Must be a valid postal code format (e.g., 6 digits in India). | Used for location-based queries, filtering catering services by region, and proximity searches.
+
+  - State (str, Required)
+    Description: State: US state where catering service is provided. | Must be a valid 2-letter US state abbreviation (e.g., "CA"). | Used for filtering catering services by location, analyzing regional demand, and targeted marketing.
+
+  - Location (str, Nullable)
+    Description: Location: Catering event address. | Must be a valid address string. Cannot be empty. | Used for proximity searches, filtering by city/state, and generating delivery routes.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** | Object detailing catering services. Contains boolean fields (e.g., `buffet`, `platedDinner`, `barService`). Defaults to `false` if not specified. | Used to filter caterers by offered services (e.g., find caterers offering `buffet: true`).
+
+  - Services Offered.Veg (str, Nullable)
+    Description: Services Offered.Veg: Indicates if vegetarian catering services are offered. | Must be "Yes" or "No". | Used to filter caterers offering vegetarian options or analyze vegetarian service availability.
+
+  - Services Offered.Non Veg (str, Nullable)
+    Description: Services Offered.Non Veg: Indicates if non-vegetarian food services are offered. | Must be a string, typically "Yes" or "No". Case-insensitive. | Used to filter caterers offering non-vegetarian options.
+
+  - Amenities (list(str), Nullable)
+    Description: Amenities: List of offered services (e.g., "Linens", "Setup"). | String values; must be from a predefined, controlled vocabulary. | Used to filter catering services based on specific amenity requirements.
+
+  - Policies (list(str), Nullable)
+    Description: Policies: Catering service policies applicable to the event. | String array; must contain valid policy names. Empty array allowed if no specific policies apply. | Query for caterers supporting specific policies or excluding those with certain policies.
+
+  - Other Information (list(str), Nullable)
+    Description: **Other Information**: Stores miscellaneous details about a catering order. | String values, no enforced schema. | Used to find orders with specific notes, e.g., dietary restrictions or delivery instructions.
+
+  - Details.Experience (str, Nullable)
+    Description: Details.Experience: Textual description of catering experience. | Limited to 255 characters. Should detail relevant experience, skills, or specializations. | Used for filtering caterers by expertise (e.g., "wedding catering", "corporate events").
+
+  - Details.Veg only (str, Nullable)
+    Description: Details.Veg only: Indicates if the catering order is exclusively vegetarian. | Must be "Yes" or "No". Defaults to "No". | Used to filter vegetarian orders or calculate vegetarian meal counts.
+
+
+Collection: weddingInvitations
+--------------------------------------------------
+Description: **Wedding Invitations Collection:**
+
+This collection stores data about wedding invitation vendors. | Key fields include `Title`, `Location`, `Rating`, `Services Offered`, `Starting Price`, `Address`, `Reviews`, `City`, `State`, and `Image URLs`. | Common use cases involve analyzing vendor pricing trends by location, identifying popular services and amenities, assessing customer satisfaction based on ratings and reviews, and understanding geographic distribution of vendors. The `Location` and `City` fields are crucial for geographic analysis.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id: Unique identifier for each wedding invitation document.** | Immutable, auto-generated ObjectId. | Used for direct document retrieval, efficient indexing, and relationship establishment with other collections.
+
+  - Title (str, Required)
+    Description: Title: Invitation Title | String; Required; Max length 100 characters. Represents the title or name of the wedding invitation design. | Used for searching, filtering, and grouping invitations by design name.
+
+  - Location (str, Nullable)
+    Description: Location: The physical address of the wedding venue. | Must be a valid address string. | Used for location-based searches, filtering invitations by venue proximity, and displaying venue details.
+
+  - Rating (str, Required)
+    Description: Rating: User-assigned rating of the invitation design (e.g., "Excellent", "Good", "Fair", "Poor"). | Must be a string; typically a predefined set of values. | Used for filtering invitations by popularity or quality.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** Details wedding-related services. | Object containing boolean fields (e.g., `photography`, `catering`) indicating service availability. Defaults to `false` if not specified. | Query for invitations offering specific services (e.g., `{"servicesOffered.photography": true}`).
+
+  - Amenities (list(str), Nullable)
+    Description: Amenities: List of offered amenities (e.g., "Open Bar", "Valet Parking"). | Must be a list of strings. Empty lists allowed. | Used to filter invitations based on offered amenities or analyze amenity popularity.
+
+  - Policies (list(str), Nullable)
+    Description: Policies: List of strings representing specific policies (e.g., "No Children", "Formal Attire"). | Must be a list of strings. Empty lists allowed. | Used to filter invitations based on policy requirements or to display policy information.
+
+  - Other Information (list(empty), list(str), Nullable)
+    Description: **Other Information:** Stores additional, unstructured details about the wedding invitation. | Can be an empty list or a list of strings. No specific format enforced. | Used for free-text searches or filtering based on keywords related to invitation specifics.
+
+  - Image URLs (list(empty), list(str), Required)
+    Description: Image URLs: Stores URLs of invitation images. | Must be a list of strings or an empty list. | Query to retrieve invitations with specific image URLs or to find invitations without any associated images (empty list).
+
+  - Address (str, Required)
+    Description: Address: Physical address of the wedding invitee. | Must be a valid postal address string. Cannot be empty. | Used for geographic analysis, sorting by location, and targeted mailings.
+
+  - Phone (str, Required)
+    Description: Phone: Guest's phone number. | Must be a valid phone number string. Optional. | Used for contacting guests, RSVP tracking, and generating guest lists by contact information.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an array of reviews for a wedding invitation. | Initially empty; reviews are added as strings. | Used to retrieve all reviews for a specific invitation or count the number of reviews.
+
+  - City (str, Required)
+    Description: City: The city where the wedding invite recipient resides. | String, required. Must be a valid city name. | Used for geographic segmentation, filtering by location, and generating mailing lists based on city.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the recipient's address. | Must be a valid 6-digit Indian postal code. | Used for geographic targeting, delivery optimization, and invitation status tracking by location.
+
+  - State (str, Required)
+    Description: State: The US state where the invitee resides. | Must be a valid two-letter US state abbreviation (e.g., "CA"). | Used for filtering invitations by location, e.g., targeting invitations to specific regions.
+
+  - Complete Location (str, Nullable)
+    Description: Complete Location: Full address of the wedding venue. | Must be a valid, human-readable address string. | Used for location-based queries, geocoding, and displaying venue information on the invitation.
+
+  - Starting Price (object, Nullable)
+    Description: Starting Price: Represents the lowest price for a wedding invitation design. | Must be a positive number. Represents USD. | Used to filter invitations by price range (e.g., find invitations under $5).
+
+  - Starting Price.Physical Invite Price (str, Nullable)
+    Description: **Starting Price.Physical Invite Price**: The starting price for physical wedding invitations. | Must be a string representing a numerical value (e.g., "10.00"). Can be null if no physical invites are offered. | Used to filter invitations by price range or sort by price.
+
+  - Details (object, Nullable)
+    Description: Details: Holds specific invitation details. | Must contain 'rsvpBy' date (ISO 8601 format). Optional fields include 'dressCode', 'transportationInfo'. | Used to filter invitations by RSVP deadline or presence of specific details.
+
+  - Details.Physical Invite Price (str, Nullable)
+    Description: Details.Physical Invite Price: The price of a single physical wedding invitation. | Must be a string representing a numerical value (e.g., "2.50"). Should be greater than or equal to "0.00". | Used for cost analysis, budgeting, and price comparisons.
+
+  - Details.Shipping Policy (str, Nullable)
+    Description: Details.Shipping Policy: Describes the shipping policy for the wedding invitations. | String containing the full shipping policy text. Must be present. | Used to query invitations based on specific shipping terms or to display the policy to customers.
+
+  - Details.Unboxed Invites (str, Nullable)
+    Description: **Details.Unboxed Invites:** Tracks the number of wedding invitations physically unboxed by recipients. | Must be a non-negative integer string. | Used to analyze invitation engagement and response rates, e.g., `{"Details.Unboxed Invites": {$gt: "50"}}`.
+
+  - Details.Minimum Order Quantity (str, Nullable)
+    Description: Details.Minimum Order Quantity: The minimum number of invitations that must be ordered. | Must be a positive integer string. | Used to filter invitations based on minimum order requirements (e.g., find invitations with a minimum order of "50").
+
+  - Other services (list(empty), list(str), Nullable)
+    Description: **Other services:** Optional list of additional services offered (e.g., calligraphy). | Must be an empty list or a list of strings. | Query to find invitations with specific services or those without any extra services.
+
+  - Details.Core Speciality (str, Nullable)
+    Description: Details.CoreSpeciality: The core area of expertise for a wedding vendor. | String, free-form text. | Used to filter vendors by their specialization (e.g., "Photography", "Catering", "Floral Design") when searching for specific services.
+
+  - Details.Boxed Invites (str, Nullable)
+    Description: Details.Boxed Invites: Indicates if invitations were delivered in boxes. | String, either "Yes" or "No". Default is "No". | Query to filter invitations based on delivery method (boxed vs. unboxed).
+
+  - Starting Price.Starting Price (str, Nullable)
+    Description: **Starting Price.Starting Price**: The lowest price for a wedding invitation design. | Must be a valid string representation of a numerical value. | Used to filter invitations by price range or find the most affordable options.
+
+  - Details.Payment Policy (str, Nullable)
+    Description: Details.Payment Policy: Describes the accepted payment methods and terms for wedding invitation orders. | String; details specific payment options (e.g., credit card, bank transfer, installments). | Query to filter invitations based on accepted payment policies.
+
+  - Details.Delivery time (str, Nullable)
+    Description: Details.Delivery_time: Estimated delivery time for invitations. | String representing the promised delivery timeframe (e.g., "3-5 business days"). Must be a valid timeframe description. | Query for invitations with specific delivery timeframes or to identify late deliveries.
+
+  - Services Offered.Digital e-Card (str, Nullable)
+    Description: **Services Offered.Digital e-Card**: Indicates if a digital e-card service is offered. | String, either "Yes" or "No". | Query to filter invitations offering digital e-cards (e.g., `{"Services Offered.Digital e-Card": "Yes"}`).
+
+
+Collection: mehendi
+--------------------------------------------------
+Description: Mehendi vendor directory | _id, Title, Complete Location, Starting Price, Bridal Mehendi Price, Rating, City, State | This collection stores information on mehendi artists and businesses. It's used to analyze pricing trends (Starting Price, Bridal Mehendi Price), geographic distribution (City, State, Complete Location), popularity (Rating, Reviews), and service offerings (Other services). The _id field uniquely identifies each vendor. Analysis can reveal optimal pricing strategies, popular locations, and key factors influencing vendor ratings.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id**: Unique identifier for each mehendi design document. | Immutable ObjectId, automatically generated by MongoDB. | Used for efficient document retrieval by ID, updates, and deletions.
+
+  - Title (str, Required)
+    Description: **Title:** The title of the mehendi design. | String, required, maximum 100 characters. Must be descriptive and unique. | Used for searching, filtering, and displaying design names.
+
+  - Complete Location (str, Required)
+    Description: Complete Location: Full address of the mehendi artist's service location. | Must be a valid address string. Can be empty if location is undisclosed. | Used for location-based searches and displaying artist's service area.
+
+  - Starting Price (object, Required)
+    Description: **Starting Price:** Represents the base price for a mehendi service. | Must be a positive number. | Used to filter services by price range (e.g., find services with a starting price under $X).
+
+  - Starting Price.Bridal Mehendi Price (str, Required)
+    Description: Starting Price.Bridal Mehendi Price: Starting price for bridal mehendi services. | String representing a numerical value (e.g., "500"). Must be a positive value. | Used to filter mehendi artists by price range and compare pricing.
+
+  - Details (object, Required)
+    Description: Details: Holds specific information about a mehendi design. | Must contain 'design_name' (string, unique) and 'artist_id' (ObjectId, references 'artists' collection). | Used for querying designs by name or artist.
+
+  - Details.Bridal Mehendi Price (str, Required)
+    Description: **Details.Bridal Mehendi Price**: The price charged for bridal mehendi services. | Must be a string representing a valid numerical value (e.g., "500", "500.00"). Represents price in INR. | Used to filter mehendi artists by price range or retrieve pricing information.
+
+  - Details.Experience (str, Nullable)
+    Description: Details.Experience: Free-text field describing the mehendi artist's experience. | Limited to 255 characters. | Used for filtering artists by experience level (e.g., "experienced," "beginner") or specific skills mentioned.
+
+  - Rating (str, Required)
+    Description: Rating: User-assigned rating for a mehendi design. | String value, typically "1" to "5" (inclusive), representing stars. Can be null if unrated. | Used for filtering designs by popularity or average rating.
+
+  - Other services (list(empty), list(str), Required)
+    Description: **Other services:** Optional list of additional services (strings) offered beyond standard mehendi application. | Must be a list of strings or an empty list. | Query for specific service combinations or absence of additional services.
+
+  - Address (str, Required)
+    Description: Address: Physical location of the customer. | Must be a valid street address string. Cannot be empty. | Used for location-based queries, delivery routing, and demographic analysis.
+
+  - Phone (str, Required)
+    Description: Phone: Contact phone number. | Must be a valid phone number string; format not enforced. | Used for contacting customers, searching by phone number, and identifying unique users.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an empty list of review objects for a mehendi design. | Initially empty; reviews are added as they are submitted. | Used to retrieve all reviews for a specific mehendi design (after reviews are added).
+
+  - Image URLs (list(str), Required)
+    Description: Image URLs: Stores URLs of images related to a mehendi design. | Must be a list of strings. URLs should be valid and accessible. | Query by specific image URL or existence of images.
+
+  - City (float, str, Required)
+    Description: City: Represents the city where the mehendi service is provided. | Type can be float (latitude) or str (city name). Prefer string for clarity. No required format. | Used for location-based searches and service area analysis.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the customer's address. | Must be a valid 6-digit Indian PIN code. | Used for location-based queries, delivery zone identification, and demographic analysis.
+
+  - State (float, str, Required)
+    Description: **State**: Represents the processing state of a mehendi application. | Can be a float (numerical code) or a string (descriptive status). Must be a valid state code or status. | Used for filtering applications by current processing stage (e.g., "State": "Approved" or "State": 2).
+
+
+Collection: wedding_planner
+--------------------------------------------------
+Description: **Wedding Planner Collection:** This collection stores data on wedding planners, enabling analysis of pricing, services, and location trends within the wedding planning industry. | Key fields include: `Title`, `Complete Location`, `Starting Price`, `Rating`, `City`, `Services Offered`, and nested `Details` fields (e.g., `Details.Price (Planning Fee)`, `Details.Experience`). | Common use cases involve identifying popular wedding destinations, analyzing pricing strategies based on experience and services, and understanding customer satisfaction through ratings and reviews. The `Location` and `City` fields are crucial for geographic analysis.
+
+
+  - _id (ObjectId, Required)
+    Description: **_id**: Unique identifier for each wedding planner document. | Immutable, automatically generated ObjectId. | Used for retrieving, updating, or deleting specific planner records.
+
+  - Title (str, Required)
+    Description: **Title:** Job title of a wedding planner. | String, required, maximum length 100 characters. Must be descriptive (e.g., "Senior Planner", "Assistant Planner"). | Used for filtering planners by experience level or role.
+
+  - Complete Location (str, Nullable)
+    Description: Complete Location: Full address of the wedding venue. | String; Required. Must be a valid, deliverable address. | Used for location-based searches, mapping, and venue details display.
+
+  - Starting Price (str, Nullable)
+    Description: **Starting Price:** The advertised base price for a wedding package. | Must be a string representing a numerical value (e.g., "1500", "2000.50"). Represents USD. | Used for price range filtering and sorting in search queries.
+
+  - Details (object, Nullable)
+    Description: Details: Stores specific wedding details. | Object containing key-value pairs; keys are detail names (e.g., 'cake_flavor'), values are corresponding details. | Used to query weddings based on specific details, like finding weddings with a particular cake flavor.
+
+  - Details.Which key cities have you planned weddings in previously? (str, Nullable)
+    Description: **Details.Which key cities have you planned weddings in previously?** | Stores a string listing cities where the planner has prior wedding planning experience. No enforced format. | Used to filter planners by geographic expertise, e.g., finding planners experienced in "New York, Los Angeles".
+
+  - Details.Price (Planning Fee) (str, Nullable)
+    Description: Details.Price (Planning Fee): The monetary amount charged for wedding planning services. | Must be a valid string representation of a number (e.g., "500", "1000.50"). Can be empty string if no fee. | Used to calculate total cost, filter by price range, or analyze pricing trends.
+
+  - Details.Fee Structure (str, Nullable)
+    Description: Details.Fee Structure: Describes the wedding planner's fee structure (e.g., percentage, flat fee, hourly). | Must be a string. Should clearly outline the fee calculation method. | Used to filter planners based on preferred fee arrangements.
+
+  - Details.Decor Policy (str, Nullable)
+    Description: Details.Decor Policy: Describes the venue's decoration rules. | String; free-form text. Should detail restrictions or allowances. | Used to filter venues based on decor flexibility (e.g., "no open flames", "balloons allowed").
+
+  - Rating (str, Required)
+    Description: Rating: User-provided rating for a wedding planner. | String representing a rating (e.g., "Excellent", "Good", "Average", "Poor"). Must be one of the predefined rating values. | Used to filter planners by rating or aggregate average ratings.
+
+  - Address (str, Required)
+    Description: Address: Physical location of a wedding venue or vendor. | String, required. Must be a valid, deliverable address. | Used for location-based searches, proximity calculations, and generating directions.
+
+  - Phone (str, Required)
+    Description: Phone: Contact phone number for the wedding planner. | Must be a valid phone number format. Required for contact. | Used to find planners by phone number or to contact a specific planner.
+
+  - Image URLs (list(str), Required)
+    Description: **Image URLs**: Stores a list of URLs referencing images related to a wedding plan. | Must be valid, publicly accessible URLs. List can be empty. | Used to retrieve all images associated with a specific wedding plan for display or processing.
+
+  - Reviews (list(empty), Required)
+    Description: Reviews: Stores an embedded array of reviews for the wedding planner. | Initially empty; reviews are added as they are received. | Query to retrieve planners with a specific number of reviews or to analyze review content.
+
+  - City (float, str, Required)
+    Description: **City**: City where the wedding will take place. | Can be a string (city name) or float (geospatial coordinates). Must be a valid city name or coordinate pair. | Used for location-based searches and filtering wedding venues.
+
+  - PinCode (str, Required)
+    Description: PinCode: Postal code of the wedding location. | Must be a valid 6-digit Indian postal code string. | Used for location-based queries, filtering venues by region, and calculating travel distances.
+
+  - State (float, str, Required)
+    Description: **State:** Represents the US state where the wedding will take place. | Type: String (2-letter abbreviation, e.g., "CA") or Float (State FIPS code). Must be a valid US state. | Used for filtering weddings by location, calculating regional costs, and targeted marketing.
+
+  - Details.Experience (str, Nullable)
+    Description: Details.Experience: Textual description of the planner's experience. | String, free-form text. Should be concise and informative. | Used for filtering planners based on experience level or specific expertise (e.g., "Luxury weddings", "Destination weddings").
+
+  - Location (str, Nullable)
+    Description: Location: Venue address for the wedding. | String, required. Must be a valid, existing address. | Used for geographic searches, filtering by city/state, and displaying venue information.
+
+  - Services Offered (object, Nullable)
+    Description: **Services Offered:** Tracks services provided by the planner. | Object containing boolean flags (e.g., `venueSourcing: true`, `catering: false`). At least one service must be `true`. | Query for planners offering specific services (e.g., `{"servicesOffered.photography": true}`).
+
+  - Services Offered.Starting Price (str, Nullable)
+    Description: **Services Offered.Starting Price**: Price for a specific wedding service package. | String representing a monetary value (e.g., "$1000"). Must be a valid price format. | Used to filter services by price range or find the lowest starting price for a service.
+
+  - Amenities (list(str), Nullable)
+    Description: Amenities: List of strings representing available amenities at a venue. | Must be a list of strings. Empty lists allowed. | Used to filter venues based on offered amenities (e.g., "parking", "catering").
+
+  - Policies (list(str), Nullable)
+    Description: Policies: List of applicable wedding policies (e.g., cancellation, payment). | Must be a list of strings. | Used to filter planners based on specific policy requirements.
+
+  - Other Information (list(str), Nullable)
+    Description: **Other Information**: Stores a list of miscellaneous notes or details about the wedding. | Each string element should be concise. | Used to find weddings with specific, less structured requirements or details.
