@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 # --- Request Model for Initial Budget Creation ---
 class InitialBudgetSetupRequest(BaseModel):
     reference_id: str = Field(..., description="User's unique reference ID for the plan")
-    total_budget: float = Field(..., gt=0, description="Total budget to be divided initially")
+    total_budget: Optional[float] = Field(None, ge=0, description="Total budget to be divided initially (allows null, 0 or positive values)")
     guest_count: int = Field(..., gt=0, description="Estimated number of guests")
     location: str = Field(..., description="Wedding location")
     wedding_dates: str = Field(..., description="Wedding dates")
@@ -19,6 +19,11 @@ class BatchCategoryEstimateInput(BaseModel):
     category_name: str = Field(..., description="Name of the category being adjusted")
     new_estimate: float = Field(..., ge=0, description="The new desired estimate for this category (ge=0 allows 0)")
     model_config = ConfigDict(extra='ignore')
+
+# class BatchCategoryEstimateInput(BaseModel):
+#     category_name: str = Field(..., description="Name of the category being adjusted")
+#     new_estimate: float = Field(..., gt=0, description="The new desired estimate for this category (must be greater than 0)")
+#     model_config = ConfigDict(extra='ignore')
 
 class BatchAdjustEstimatesFixedTotalRequest(BaseModel):
     adjustments: List[BatchCategoryEstimateInput] = Field(..., min_length=1, description="List of categories and their new estimates")
@@ -33,7 +38,7 @@ class BudgetCategoryBreakdown(BaseModel):
 
 # --- Database Schema Model (Shared) ---
 class BudgetPlanDBSchema(BaseModel):
-    reference_id: str = Field(alias="_id")
+    reference_id: str 
     total_budget_input: float
     wedding_dates_input: str
     guest_count_input: int
@@ -56,7 +61,59 @@ class BudgetPlannerAPIResponse(BaseModel):
     balance: Optional[float] = None
     model_config = ConfigDict(extra='ignore')
 
-class BatchAdjustEstimatesFixedTotalRequest(BaseModel):
-    adjustments: List[BatchCategoryEstimateInput] = Field(..., min_length=1, description="List of categories and their new estimates")
-    new_total_budget: float = Field(default=0, description="New total budget amount. If 0 or not provided, existing budget is maintained. If > 0, budget will be updated to this value.")
+# class BatchAdjustEstimatesFixedTotalRequest(BaseModel):
+#     adjustments: List[BatchCategoryEstimateInput] = Field(..., min_length=1, description="List of categories and their new estimates")
+#     new_total_budget: float = Field(default=0, description="New total budget amount. If 0 or not provided, existing budget is maintained. If > 0, budget will be updated to this value.")
+#     model_config = ConfigDict(extra='ignore')
+    
+class BatchCategoryDeleteInput(BaseModel):
+    category_name: str = Field(..., description="Name of the category to be deleted")
     model_config = ConfigDict(extra='ignore')
+
+# class BatchAdjustEstimatesFixedTotalRequest(BaseModel):
+#     adjustments: List[BatchCategoryEstimateInput] = Field(default=[], description="List of categories and their new estimates")
+#     deletions: List[BatchCategoryDeleteInput] = Field(default=[], description="List of categories to be deleted")
+#     new_total_budget: float = Field(default=0, description="New total budget amount. If 0 or not provided, existing budget is maintained. If > 0, budget will be updated to this value.")
+#     model_config = ConfigDict(extra='ignore')
+
+
+# class BatchAdjustEstimatesFixedTotalRequest(BaseModel):
+#     adjustments: List[BatchCategoryEstimateInput] = Field(default=[], description="List of categories and their new estimates")
+#     deletions: List[BatchCategoryDeleteInput] = Field(default=[], description="List of categories to be deleted")
+#     new_total_budget: float = Field(default=0, description="New total budget amount. If 0 or not provided, existing budget is maintained. If > 0, budget will be updated to this value.")
+    
+#     model_config = ConfigDict(
+#         extra='ignore',
+#         json_schema_extra={
+#             "example": {
+#                 "adjustments": [
+#                     {"category_name": "string", "new_estimate": 0}
+#                 ],
+#                 "deletions": [
+#                     {"category_name": "string"}
+#                 ],
+#                 "new_total_budget": 0
+#             }
+#         }
+#     )
+
+
+class BatchAdjustEstimatesFixedTotalRequest(BaseModel):
+    adjustments: List[BatchCategoryEstimateInput] = Field(default=[], description="List of categories and their new estimates")
+    deletions: List[BatchCategoryDeleteInput] = Field(default=[], description="List of categories to be deleted")
+    new_total_budget: float = Field(default=0, description="New total budget amount. If 0 or not provided, existing budget is maintained. If > 0, budget will be updated to this value.")
+    
+    model_config = ConfigDict(
+        extra='ignore',
+        json_schema_extra={
+            "example": {
+                "adjustments": [
+                    {"category_name": "string", "new_estimate": 0}
+                ],
+                "deletions": [
+                    {"category_name": "string"}
+                ],
+                "new_total_budget": 0
+            }
+        }
+    )
