@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weddinverse-api-dev
+  labels:
+    app: weddinverse-api-dev
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: weddinverse-api-dev
+  template:
+    metadata:
+      labels:
+        app: weddinverse-api-dev
+    spec:
+      containers:
+        - name: weddinverse-api-dev
+          image: asia-south1-docker.pkg.dev/ken-cloud-436408/weddinverse-api/dev:latest
+          ports:
+            - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weddinverse-api-dev
+  labels:
+    app: weddinverse-api-dev
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  selector:
+    app: weddinverse-api-dev
+  type: LoadBalancer

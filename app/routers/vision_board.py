@@ -19,7 +19,8 @@ def vision_board_endpoint(req: VisionBoardRequest):
     except Exception as e:
         logger.error(f"Error in Vision‑Board endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-    
+        
+
 
 @router.get(
     "/vision-board/{reference_id}",
