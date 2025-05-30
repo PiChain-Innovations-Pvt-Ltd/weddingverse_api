@@ -47,7 +47,9 @@ class ConversationEntry(BaseModel):
     answer:Any
 
 class ChatConversationDocument(BaseModel):
-    reference_id: str = Field(alias="_id")
+    # FIXED: Don't use reference_id as _id, let MongoDB generate its own _id
+    # Remove the alias to avoid mapping reference_id to _id
+    reference_id: str  # This will be a separate field, not the MongoDB _id
     conversation: List[ConversationEntry] = []
     
     class Config:

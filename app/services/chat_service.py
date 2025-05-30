@@ -198,7 +198,7 @@ def process_question(reference_id: str, question: str) -> Tuple[str, Any, Option
     cutoff_date = now_utc - timedelta(days=CONVERSATION_HISTORY_RETENTION_DAYS)
     try:
         pull_result = db[CHAT_CONVERSATIONS_COLLECTION_NAME].update_one(
-            {"_id": reference_id},
+            {"reference_id": reference_id},  # Query by reference_id field, not _id
             {"$pull": {"conversation": {"timestamp": {"$lt": cutoff_date}}}}
         )
         if pull_result.modified_count > 0:
@@ -207,7 +207,7 @@ def process_question(reference_id: str, question: str) -> Tuple[str, Any, Option
         logger.error(f"Error removing old conversation entries for reference_id '{reference_id}': {e}", exc_info=True)
 
     # --- 2. Load Current Conversation for LLM Memory ---
-    conversation_doc_dict = db[CHAT_CONVERSATIONS_COLLECTION_NAME].find_one({"_id": reference_id})
+    conversation_doc_dict = db[CHAT_CONVERSATIONS_COLLECTION_NAME].find_one({"reference_id": reference_id})  # Query by reference_id field
     all_conversation_entries_from_db: List[ConversationEntry] = []
 
     if conversation_doc_dict:
@@ -263,16 +263,17 @@ def process_question(reference_id: str, question: str) -> Tuple[str, Any, Option
     )
 
     try:
+        # FIXED: Let MongoDB generate its own _id, don't use reference_id as _id
         update_result = db[CHAT_CONVERSATIONS_COLLECTION_NAME].update_one(
-            {"_id": reference_id},
+            {"reference_id": reference_id},  # Query by reference_id field
             {
                 "$push": {"conversation": new_qna_entry.model_dump(exclude_none=True)},
-                "$setOnInsert": {"reference_id": reference_id}
+                "$setOnInsert": {"reference_id": reference_id}  # Only set reference_id field, let _id be auto-generated
             },
             upsert=True
         )
         if update_result.upserted_id:
-            logger.info(f"Created new conversation document and added entry for reference_id '{reference_id}'.")
+            logger.info(f"Created new conversation document with MongoDB _id '{update_result.upserted_id}' for reference_id '{reference_id}'.")
         elif update_result.modified_count > 0:
             logger.info(f"Appended new conversation entry for reference_id '{reference_id}'.")
     except Exception as e:

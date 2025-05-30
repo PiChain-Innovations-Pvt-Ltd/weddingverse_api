@@ -11,7 +11,8 @@ from app.routers import (
     chat,
     image_categorization,
     initial_budget_router, # For Step 1 (Initial Budget Setup)
-    batch_adjust_router    # For Step 2 (Batch Adjust, Fixed Total)
+    batch_adjust_router ,  # For Step 2 (Batch Adjust, Fixed Total)
+    vendor_discovery_router
 )
 from app.dependencies import require_jwt_auth
 from app.config import settings # Assuming settings.py for ENV
@@ -58,6 +59,7 @@ app.include_router(
 # Budget-related routers (these already define their /api/v1 prefixes internally)
 app.include_router(initial_budget_router.router)
 app.include_router(batch_adjust_router.router)
+app.include_router(vendor_discovery_router.router)
 
 # --- Exception Handlers ---
 @app.exception_handler(HTTPException) # General HTTPException handler
