@@ -7,8 +7,9 @@ from app.models.budget import BudgetPlanDBSchema
 from app.models.vendors import VendorItem, ExploreVendorsResponse
 from app.services.mongo_service import db
 from app.utils.logger import logger
+from app.config import settings
 
-BUDGET_PLANS_COLLECTION = "budget_plans"
+BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION
 DEFAULT_PAGE_SIZE = 16
 
 # Collections that are NOT vendor collections
