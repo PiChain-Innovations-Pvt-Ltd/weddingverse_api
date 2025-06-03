@@ -4,8 +4,9 @@ from typing import List
 from app.models.budget import InitialBudgetSetupRequest, BudgetPlanDBSchema, BudgetCategoryBreakdown # Updated import
 from app.services.mongo_service import db
 from app.utils.logger import logger
+from app.config import settings
 
-BUDGET_PLANS_COLLECTION = "budget_plans"
+BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION
 
 INITIAL_CATEGORIES_DEFINED = {
     "Venue": 0.25,

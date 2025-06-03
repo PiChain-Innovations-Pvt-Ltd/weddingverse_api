@@ -9,8 +9,10 @@ from app.models.budget import (
 )
 from app.services.mongo_service import db
 from app.utils.logger import logger
+from app.config import settings
 
-BUDGET_PLANS_COLLECTION = "budget_plans"
+BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION
+
 REMAINING_BUDGET_CATEGORY_NAME = "Other Expenses / Unallocated"
 
 # Configuration for handling budget mismatches when all categories are explicitly set
