@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     VISION_BOARD_COLLECTION: str = Field(..., env="VISION_BOARD_COLLECTION")
     VENDOR_ONBOARDING_COLLECTION: str = Field(..., env="VENDOR_ONBOARDING_COLLECTION")
     WEDDINGVERSE_METADATA_COLLECTION: str = Field(..., env="WEDDINGVERSE_METADATA_COLLECTION")
-
+    CHAT_CONVERSATIONS_COLLECTION: str = Field(..., env="CHAT_CONVERSATIONS_COLLECTION")
+    BUDGET_PLANS_COLLECTION: str = Field(..., env="BUDGET_PLANS_COLLECTION")
     # Schema directory (if used elsewhere)
     schema_dir:              str = Field(..., env="SCHEMA_DIR")
 
