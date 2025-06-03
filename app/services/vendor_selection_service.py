@@ -7,8 +7,9 @@ from app.models.vendors import SelectedVendorInfo
 from app.services.mongo_service import db
 from app.utils.logger import logger
 from app.services.vendor_discovery_service import get_available_vendor_categories, detect_field_structure, convert_rating_to_float
+from app.config import settings
 
-BUDGET_PLANS_COLLECTION = "budget_plans"
+BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION
 
 def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id: str) -> BudgetPlanDBSchema:
     """
