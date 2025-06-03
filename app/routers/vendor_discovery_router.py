@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query, Path
 from typing import List, Dict, Any
 
 from app.models.vendors import ExploreVendorsResponse
-from app.services.vendor_discovery_service import get_vendors_for_category, get_supported_categories, generate_vendor_id, demonstrate_vendor_id_generation
+from app.services.vendor_discovery_service import get_vendors_for_category, get_supported_categories
 from app.utils.logger import logger
 from app.dependencies import require_jwt_auth
 
@@ -30,7 +30,7 @@ async def explore_vendors_endpoint(
     reference_id: str = Path(..., description="The unique reference ID of the budget plan"),
     category_name: str = Path(..., description="Any valid vendor category/collection name (e.g., 'venues', 'djs', 'mehendi', 'bridal_wear', etc.)"),
     page: int = Query(1, ge=1, description="Page number for pagination (starts from 1)"),
-    limit: int = Query(10, ge=1, le=100, description="Number of vendors per page (default: 10, max: 100)"),
+    limit: int = Query(16, ge=1, le=200, description="Number of vendors per page (default: 16, max: 200)"),
     sort_by: str = Query("Rating", description="Field to sort by (currently only Rating is supported)"),
     order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order: 'asc' or 'desc'")
 ):
