@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.utils.logger import logger
-from app.routers import vision_board, chat, image_categorization, auth, webhook
+from app.routers import vision_board, chat, image_categorization, auth, webhook, initial_budget_router, batch_adjust_router, vendor_discovery_router, vendor_selection_router
 from app.services import webhook_workflow_service
 from app.dependencies import require_jwt_auth
 from app.config import settings
@@ -59,6 +59,13 @@ app.include_router(
     prefix="/api/v1", # The webhook path is /api/v1/webhook
     tags=["Webhook Workflow"]
 )
+
+# Budget-related routers (these already define their /api/v1 prefixes internally)
+app.include_router(initial_budget_router.router)
+app.include_router(batch_adjust_router.router)
+app.include_router(vendor_discovery_router.router)
+app.include_router(vendor_selection_router.router) # ADDED: Include the new router here
+
 
 @app.exception_handler(status.HTTP_401_UNAUTHORIZED)
 async def unauthorized_exception_handler(request: Request, exc):
