@@ -29,19 +29,19 @@ utility_router = APIRouter(
 async def explore_vendors_endpoint(
     reference_id: str = Path(..., description="The unique reference ID of the budget plan"),
     category_name: str = Path(..., description="Any valid vendor category/collection name (e.g., 'venues', 'djs', 'mehendi', 'bridal_wear', etc.)"),
-    page: int = Query(1, ge=1, description="Page number for pagination (starts from 1)"),
-    limit: int = Query(16, ge=1, le=200, description="Number of vendors per page (default: 16, max: 200)"),
-    sort_by: str = Query("Rating", description="Field to sort by (currently only Rating is supported)"),
-    order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order: 'asc' or 'desc'")
+    # page: int = Query(1, ge=1, description="Page number for pagination (starts from 1)"),
+    # limit: int = Query(16, ge=1, le=200, description="Number of vendors per page (default: 16, max: 200)"),
+    # sort_by: str = Query("Rating", description="Field to sort by (currently only Rating is supported)"),
+    # order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order: 'asc' or 'desc'")
 ):
     try:
         response_data = get_vendors_for_category(
             reference_id=reference_id,
             category_name=category_name,
-            sort_by=sort_by,
-            order=order,
-            page=page,
-            limit=limit
+            # sort_by=sort_by,
+            # order=order,
+            # page=page,
+            # limit=limit
         )
         return response_data
         
@@ -63,14 +63,14 @@ async def get_supported_categories_endpoint() -> Dict[str, Any]:
         logger.error(f"Error getting supported categories: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error retrieving supported categories.")
 
-@utility_router.get(
-    "/vendor-id-demo",
-    summary="Demonstrate Hash-Based Vendor ID Generation",
-    description="Shows how vendor IDs are generated using deterministic hashing (not random). Educational endpoint."
-)
-async def vendor_id_demonstration_endpoint() -> Dict[str, Any]:
-    try:
-        return demonstrate_vendor_id_generation()
-    except Exception as e:
-        logger.error(f"Error in vendor ID demonstration: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error generating vendor ID demonstration.")
+# @utility_router.get(
+#     "/vendor-id-demo",
+#     summary="Demonstrate Hash-Based Vendor ID Generation",
+#     description="Shows how vendor IDs are generated using deterministic hashing (not random). Educational endpoint."
+# )
+# async def vendor_id_demonstration_endpoint() -> Dict[str, Any]:
+#     try:
+#         return demonstrate_vendor_id_generation()
+#     except Exception as e:
+#         logger.error(f"Error in vendor ID demonstration: {e}", exc_info=True)
+#         raise HTTPException(status_code=500, detail="Error generating vendor ID demonstration.")
