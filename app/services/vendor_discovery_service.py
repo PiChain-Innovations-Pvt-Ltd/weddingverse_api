@@ -9,7 +9,9 @@ from app.services.mongo_service import db
 from app.utils.logger import logger
 from app.config import settings
 
-BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION
+BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION 
+
+#BUDGET_PLANS_COLLECTION = "budget_planner"
 DEFAULT_PAGE_SIZE = 16
 
 # Collections that are NOT vendor collections

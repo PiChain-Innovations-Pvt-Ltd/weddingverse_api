@@ -9,7 +9,7 @@ from app.utils.logger import logger
 
 # Collections that are NOT vendor collections
 EXCLUDED_COLLECTIONS = {
-    "budget_plans", "chat_conversations", "conversations", 
+    "budget_planner", "chat_conversations", "conversations", 
     "image_description", "WeddingVerse_Output"
 }
 

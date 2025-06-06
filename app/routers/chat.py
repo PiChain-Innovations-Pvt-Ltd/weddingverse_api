@@ -1,48 +1,42 @@
-# from fastapi import APIRouter, HTTPException
-# from app.utils.logger import logger
-# from app.models.chat import ChatRequest, ChatResponse
-# from app.services.chat_service import process_question
-
-# router = APIRouter()
-
-# @router.post("/chat", response_model=ChatResponse)
-# def chat_endpoint(req: ChatRequest):
-#     try:
-#         return process_question(req.question)
-#     except Exception as e:
-#         logger.error(f"Error in endpoint {router}: {e}", exc_info=True)
-#         raise HTTPException(status_code=500, detail=str(e))
-
+# app/routers/chat.py - Fixed with simple IST timestamps
 
 from fastapi import APIRouter, HTTPException
 from app.utils.logger import logger
-from app.models.chat import ChatRequest, CurrentChatInteractionResponse # Changed model
+from app.models.chat import ChatRequest, CurrentChatInteractionResponse, get_ist_timestamp
 from app.services.chat_service import process_question
-from datetime import datetime, timezone # Added for timestamp
 
 router = APIRouter()
 
-@router.post("/chat", response_model=CurrentChatInteractionResponse) # Updated response_model
+@router.post("/chat", response_model=CurrentChatInteractionResponse)
 def chat_endpoint(req: ChatRequest):
+    """
+    Chat endpoint with fixed IST timestamp handling.
+    
+    Returns properly formatted IST timestamps: "YYYY-MM-DD HH:MM:SS"
+    """
     try:
-        # process_question now returns current Q, A, and error history
+        logger.info(f"Chat request for reference_id: {req.reference_id}, question: {req.question}")
+        
+        # Process the question
         current_question, current_answer, error_history = process_question(req.reference_id, req.question)
         
-        # Get current timestamp for this interaction
-        interaction_timestamp = datetime.now(timezone.utc)
-
-        # Construct the response using the new model
+        # Get current IST timestamp for this interaction
+        interaction_timestamp = get_ist_timestamp()
+        
+        # Construct the response with simple IST timestamp
         response = CurrentChatInteractionResponse(
             reference_id=req.reference_id,
-            current_timestamp=interaction_timestamp,
+            current_timestamp=interaction_timestamp,  # ✅ Simple IST string
             question=current_question,
             answer=current_answer,
-            error_history=error_history # Pass along error history if any
+            error_history=error_history
         )
         
+        logger.info(f"Chat response ready for {req.reference_id} at {interaction_timestamp}")
         return response
 
-    except HTTPException as he: # Re-raise HTTPExceptions directly
+    except HTTPException as he:
+        # Re-raise HTTP exceptions directly
         raise he
     except Exception as e:
         logger.error(f"Error in chat_endpoint for reference_id '{req.reference_id}': {e}", exc_info=True)

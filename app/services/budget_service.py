@@ -1,7 +1,9 @@
-# app/services/budget_service.py
-from datetime import datetime, timezone
+# app/services/budget_service.py - Fixed to save timestamps as strings
+
+from dateutil import tz
+from datetime import datetime
 from typing import List
-from app.models.budget import InitialBudgetSetupRequest, BudgetPlanDBSchema, BudgetCategoryBreakdown # Updated import
+from app.models.budget import InitialBudgetSetupRequest, BudgetPlanDBSchema, BudgetCategoryBreakdown
 from app.services.mongo_service import db
 from app.utils.logger import logger
 from app.config import settings
@@ -16,7 +18,12 @@ INITIAL_CATEGORIES_DEFINED = {
 }
 REMAINING_BUDGET_CATEGORY_NAME = "Other Expenses / Unallocated"
 
-# The service function now returns the full DB schema object
+# Simple IST timestamp utility
+def get_ist_timestamp() -> str:
+    """Get current timestamp in IST format: YYYY-MM-DD HH:MM:SS"""
+    ist = tz.gettz("Asia/Kolkata")
+    return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+
 def create_initial_budget_plan(request: InitialBudgetSetupRequest) -> BudgetPlanDBSchema:
     clean_reference_id = request.reference_id.strip()
     logger.info(f"Processing budget plan for reference_id: {clean_reference_id}, Input Budget: {request.total_budget}")
@@ -24,7 +31,7 @@ def create_initial_budget_plan(request: InitialBudgetSetupRequest) -> BudgetPlan
     # Handle null/None budget values
     if request.total_budget is None or request.total_budget <= 0:
         logger.warning(f"Invalid budget provided: {request.total_budget}. Setting to 0.")
-        actual_total_budget_input = 0.0 # Renamed for clarity in this function
+        actual_total_budget_input = 0.0
     else:
         actual_total_budget_input = request.total_budget
 
@@ -77,25 +84,24 @@ def create_initial_budget_plan(request: InitialBudgetSetupRequest) -> BudgetPlan
                 )
             )
             logger.info(f"{(remaining_percentage_decimal * 100):.2f}% of budget ({remaining_amount}) is unallocated.")
-        elif sum_of_defined_percentages < 0.999: # Small negative or close to 0 remaining
+        elif sum_of_defined_percentages < 0.999:
              logger.info(f"Budget has a small remaining unallocated portion of {remaining_amount} or is fully allocated by defined categories.")
-        else: # sum_of_defined_percentages is 1.0 or more
+        else:
             logger.info("Budget is fully allocated or defined categories exceed 100%. No 'Other Expenses' category added.")
     else:
         logger.info("Budget is 0 or invalid. No category breakdown will be created.")
 
-    timestamp = datetime.now(timezone.utc)
+    # ✅ Create IST timestamp as string
+    timestamp_string = get_ist_timestamp()
+    logger.info(f"Creating budget plan with IST timestamp: {timestamp_string}")
 
-    # Calculate total_spent (initially 0 for a new plan, derived from actual_cost) and balance
-    # Safely sum actual_cost, treating None as 0.0
+    # Calculate total_spent and balance
     total_spent = round(sum(cat.actual_cost or 0.0 for cat in breakdown_list), 2)
-    
-    # balance = current_total_budget - total_spent
     balance = round(actual_total_budget_input - total_spent, 2)
 
     logger.info(f"Budget calculation - Initial Total Budget: {actual_total_budget_input}, Initial Total Spent: {total_spent}, Initial Balance: {balance}")
 
-    # This is the full data object we will save to DB and return from this service
+    # Create the full data object with string timestamp
     full_budget_plan_data = BudgetPlanDBSchema(
         reference_id=clean_reference_id,
         total_budget_input=actual_total_budget_input,
@@ -104,20 +110,23 @@ def create_initial_budget_plan(request: InitialBudgetSetupRequest) -> BudgetPlan
         location_input=request.location,
         no_of_events_input=request.no_of_events,
         budget_breakdown=breakdown_list,
-        timestamp=timestamp,
+        timestamp=timestamp_string,  # ✅ String timestamp, not datetime object
         current_total_budget=actual_total_budget_input,
         total_spent=total_spent,
         balance=balance
     )
 
-    # Using model_dump()
-    document_data_to_set = full_budget_plan_data.model_dump()
+    # Convert to dict for database storage
+    document_data = full_budget_plan_data.model_dump()
+    
+    # ✅ Ensure timestamp remains a string in the database
+    # No additional conversion needed since model_dump() preserves the string
+    logger.info(f"Saving to database with timestamp: {document_data['timestamp']} (type: {type(document_data['timestamp'])})")
 
     try:
-        # Using 'reference_id' for querying, as requested
         result = db[BUDGET_PLANS_COLLECTION].update_one(
             {"reference_id": clean_reference_id},
-            {"$set": document_data_to_set},
+            {"$set": document_data},
             upsert=True
         )
         if result.upserted_id:
@@ -129,4 +138,4 @@ def create_initial_budget_plan(request: InitialBudgetSetupRequest) -> BudgetPlan
     except Exception as e:
         logger.error(f"Error saving budget plan for reference_id: {clean_reference_id} to DB: {e}", exc_info=True)
 
-    return full_budget_plan_data # Return the full data object
+    return full_budget_plan_data

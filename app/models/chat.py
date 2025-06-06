@@ -1,42 +1,13 @@
-# from pydantic import BaseModel
-# from typing import Any, List, Optional
-
-# class ChatRequest(BaseModel):
-#     question: str
-
-# class ErrorHistoryItem(BaseModel):
-#     attempt: int
-#     query: Optional[str]
-#     error: str
-#     fix: Optional[str] = None
-
-# class MongoResult(BaseModel):
-#     collection: str
-#     filter: Any
-#     projection: Any
-#     results: List[Any]
-
-# class ChatResponse(BaseModel):
-#     reference_id: str
-#     timestamp: str
-#     question: str
-#     response_type: str
-#     response: Optional[str] = None
-#     mongo_query: Optional[str] = None
-#     results: Optional[List[MongoResult]] = None
-#     error: Optional[str] = None
-#     error_history: Optional[List[ErrorHistoryItem]] = None
-#     table_output: Optional[str] = None
-
 from pydantic import BaseModel, Field
 from typing import Any, List, Optional, Dict
 from datetime import datetime, timezone
-
+from dateutil import tz
 # Helper function for Zulu time formatting
-def datetime_to_zulu(dt: datetime) -> str:
-    if dt.tzinfo is None: # If naive, assume UTC
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+def get_ist_timestamp() -> str:
+    """Get current timestamp in IST format: YYYY-MM-DD HH:MM:SS"""
+    ist = tz.gettz("Asia/Kolkata")
+    return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
 class ChatRequest(BaseModel):
     reference_id: str
@@ -71,7 +42,7 @@ class ChatResponse(BaseModel):
 # --- Models for Chat Conversation Collection ---
 
 class ConversationEntry(BaseModel):
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # ADDED BACK: For 30-day memory filtering
+    timestamp: str = Field(default_factory=get_ist_timestamp) # For 30-day memory filtering
     question: str
     #answer: List[Dict[str, Any]] # Flexible: holds AI text response or structured data
     answer:Any
@@ -84,14 +55,11 @@ class ChatConversationDocument(BaseModel):
     
     class Config:
         populate_by_name = True
-        json_encoders = {
-            datetime: datetime_to_zulu  # Added back for timestamp encoding
-        }
-
+        
 # --- New Response Model for the /chat endpoint ---
 class CurrentChatInteractionResponse(BaseModel):
     reference_id: str
-    current_timestamp: datetime # Timestamp for THIS specific interaction
+    current_timestamp: str = Field(default_factory=get_ist_timestamp) # Timestamp for THIS specific interaction
     question: str
     #answer: List[Dict[str, Any]] # The answer to the current question
     answer:Any
@@ -102,6 +70,4 @@ class CurrentChatInteractionResponse(BaseModel):
     
     class Config:
         populate_by_name = True
-        json_encoders = {
-            datetime: datetime_to_zulu
-        }
+       
