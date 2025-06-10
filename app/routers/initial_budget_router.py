@@ -9,7 +9,7 @@ from app.utils.logger import logger
 from app.dependencies import require_jwt_auth
 
 router = APIRouter(
-    prefix="/api/v1/budget-planner",
+    prefix="/api/v1",
     tags=["Budget Planner - Initial Setup"],
     dependencies=[Depends(require_jwt_auth)]
 )
@@ -21,7 +21,7 @@ def get_ist_timestamp() -> str:
     return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
 @router.post(
-    "/create",
+    "/budget-planner",
     response_model=BudgetPlannerAPIResponse,
     summary="Create Initial Budget Plan",
     description=(
