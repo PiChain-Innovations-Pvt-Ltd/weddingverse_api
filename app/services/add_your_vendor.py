@@ -18,23 +18,23 @@ def get_ist_timestamp() -> str:
     ist = tz.gettz("Asia/Kolkata")
     return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
-# Mapping from budget category names to vendor collection names
-BUDGET_CATEGORY_TO_VENDOR_COLLECTION_MAP = {
-    "Venue": "venues",
-    "Caterer": "catering", 
-    "Photography": "photographers",
-    "Makeup": "makeups",
-    "DJ": "djs",
-    "Decor": "decors",
-    "Mehendi": "mehendi",
-    "Bridal Wear": "bridal_wear",
-    "Wedding Invitations": "weddingInvitations",
-    "Honeymoon": "honeymoon",
-    "Car": "car",
-    "Astrology": "astro",
-    "Jewellery": "jewellery",
-    "Wedding Planner": "wedding_planner",
-}
+# # Mapping from budget category names to vendor collection names
+# BUDGET_CATEGORY_TO_VENDOR_COLLECTION_MAP = {
+#     "Venue": "venues",
+#     "Caterer": "catering", 
+#     "Photography": "photographers",
+#     "Makeup": "makeups",
+#     "DJ": "djs",
+#     "Decor": "decors",
+#     "Mehendi": "mehendi",
+#     "Bridal Wear": "bridal_wear",
+#     "Wedding Invitations": "weddingInvitations",
+#     "Honeymoon": "honeymoon",
+#     "Car": "car",
+#     "Astrology": "astro",
+#     "Jewellery": "jewellery",
+#     "Wedding Planner": "wedding_planner",
+# }
 
 def generate_user_vendor_id(vendor_name: str, category_name: str) -> str:
     """Generate a unique ID for user-added vendors."""
@@ -104,7 +104,7 @@ def add_vendor_to_budget_category(
         
         # Add vendor to selected_vendors list
         user_vendor_id = generate_user_vendor_id(vendor_name, category_name)
-        vendor_collection_name = BUDGET_CATEGORY_TO_VENDOR_COLLECTION_MAP.get(category_name, category_name.lower().replace(" ", "_"))
+        vendor_collection_name = category_name
         
         user_selected_vendor = SelectedVendorInfo(
             category_name=vendor_collection_name,
