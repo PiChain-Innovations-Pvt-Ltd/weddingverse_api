@@ -21,7 +21,7 @@ def get_ist_timestamp() -> str:
     return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
 @router.post(
-    "/select-vendor/{vendor_id}",
+    "/select-vendor/{vendor_name}",
     response_model=BudgetPlannerAPIResponse,
     summary="Add a Selected Vendor to the Budget Plan",
     description=(
@@ -34,7 +34,7 @@ def get_ist_timestamp() -> str:
 async def select_vendor_endpoint(
     reference_id: str = Path(..., description="The unique reference ID of the budget plan"),
     category_name: str = Path(..., description="The category of the vendor being selected (e.g., 'venues', 'photographers')"),
-    vendor_id: str = Path(..., description="The MongoDB ObjectId of the vendor to be selected")
+    vendor_name: str = Path(..., description="The name of the vendor to be selected")
 ):
     """
     Select a vendor and add to budget plan with IST timestamp.
@@ -47,16 +47,16 @@ async def select_vendor_endpoint(
     Args:
         reference_id: Budget plan reference ID
         category_name: Vendor category (venues, photographers, etc.)
-        vendor_id: MongoDB ObjectId of the vendor
+        vendor_name: Name of the vendor
         
     Returns:
         Updated budget plan with selected vendor and IST timestamp
     """
     try:
-        logger.info(f"Selecting vendor {vendor_id} in category {category_name} for plan {reference_id}")
+        logger.info(f"Selecting vendor '{vendor_name}' in category {category_name} for plan {reference_id}")
         
         # Add the selected vendor to the plan
-        updated_plan: BudgetPlanDBSchema = add_selected_vendor_to_plan(reference_id, category_name, vendor_id)
+        updated_plan: BudgetPlanDBSchema = add_selected_vendor_to_plan(reference_id, category_name, vendor_name)
         
         # ✅ Get current IST timestamp for the API response
         current_timestamp = get_ist_timestamp()
@@ -80,3 +80,4 @@ async def select_vendor_endpoint(
     except Exception as e:
         logger.error(f"Unexpected error during vendor selection for plan {reference_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error during vendor selection.")
+    

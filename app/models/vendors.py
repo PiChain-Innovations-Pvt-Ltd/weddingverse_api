@@ -5,7 +5,7 @@ from bson import ObjectId
 
 class VendorItem(BaseModel):
     # Required field - generated using hash-based approach for security
-    vendor_id: str = Field(..., description="Unique identifier for the vendor (hash-based, not MongoDB ObjectId)")
+    vendor_id: Optional[str] = Field(..., description="Unique identifier for the vendor")
     
     title: str = Field(..., alias="Title", description="Vendor title/name")
     
@@ -101,7 +101,6 @@ class VendorDetailsResponse(BaseModel):
 class SelectedVendorInfo(BaseModel):
     """Represents a vendor selected by the user, to be stored in the budget plan."""
     category_name: str = Field(..., description="The category of the selected vendor (e.g., 'venues', 'photographers')")
-    vendor_id: str = Field(..., description="The MongoDB ObjectId of the selected vendor")
     title: str = Field(..., description="The title or name of the selected vendor")
     city: Optional[str] = Field(None, description="The city of the selected vendor (optional)")
     rating: Optional[float] = Field(None, description="The rating of the selected vendor (optional)")

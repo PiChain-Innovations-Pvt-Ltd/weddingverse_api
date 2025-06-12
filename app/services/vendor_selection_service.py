@@ -11,17 +11,15 @@ from app.config import settings
 
 BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION 
 
-# BUDGET_PLANS_COLLECTION = "budget_planner"
-
-def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id: str) -> BudgetPlanDBSchema:
+def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_name: str) -> BudgetPlanDBSchema:
     """
     Adds or updates a selected vendor to the user's budget plan within a specific category.
-    Fetches vendor data from the corresponding collection based on vendor_id and category_name.
+    Fetches vendor data from the corresponding collection based on vendor_name and category_name.
 
     Args:
         reference_id (str): The unique ID of the budget plan.
         category_name (str): The category of the selected vendor (e.g., 'venues', 'photographers').
-        vendor_id (str): The MongoDB ObjectId of the vendor to be selected.
+        vendor_name (str): The name of the vendor to be selected.
 
     Returns:
         BudgetPlanDBSchema: The updated budget plan document.
@@ -31,7 +29,7 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id
                        or if there's a database error.
     """
     logger.info(f"Attempting to add/update selected vendor for reference_id '{reference_id}', "
-                f"category '{category_name}', vendor_id '{vendor_id}'")
+                f"category '{category_name}', vendor_name '{vendor_name}'")
 
     # 1. Validate the category name against dynamically available categories
     available_collections = get_available_vendor_categories()
@@ -42,15 +40,15 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id
             detail=f"Invalid category '{category_name}'. Not a supported vendor category. Available: {available_collections}"
         )
 
-    # 2. Validate vendor_id format (should be a valid MongoDB ObjectId)
-    try:
-        object_id = ObjectId(vendor_id)
-    except Exception as e:
-        logger.warning(f"Invalid vendor_id format '{vendor_id}': {e}")
+    # 2. Validate vendor_name (should not be empty)
+    if not vendor_name or not vendor_name.strip():
+        logger.warning(f"Empty or invalid vendor_name provided: '{vendor_name}'")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid vendor_id format. Must be a valid MongoDB ObjectId."
+            detail=f"Vendor name cannot be empty."
         )
+
+    vendor_name = vendor_name.strip()
 
     # 3. Fetch vendor data from the corresponding collection
     try:
@@ -68,15 +66,30 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id
         for standard_field, actual_field in field_map.items():
             projection[actual_field] = 1
 
-        # Fetch vendor document from collection
-        vendor_doc = db[category_name].find_one({"_id": object_id}, projection)
+        # Search for vendor by name using the detected title field
+        title_field = field_map.get("title")
+        if not title_field:
+            logger.error(f"Could not detect title field for collection '{category_name}'")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Could not identify name field in collection '{category_name}'"
+            )
+
+        # Use case-insensitive regex search for vendor name
+        vendor_doc = db[category_name].find_one(
+            {title_field: {"$regex": f"^{vendor_name}$", "$options": "i"}}, 
+            projection
+        )
         
         if not vendor_doc:
-            logger.warning(f"Vendor with ID '{vendor_id}' not found in collection '{category_name}'")
+            logger.warning(f"Vendor with name '{vendor_name}' not found in collection '{category_name}'")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Vendor with ID '{vendor_id}' not found in category '{category_name}'"
+                detail=f"Vendor with name '{vendor_name}' not found in category '{category_name}'"
             )
+
+        # Get the vendor_id from the found document
+        vendor_id = str(vendor_doc["_id"])
 
         # Extract vendor information using field mapping
         vendor_title = None
@@ -112,7 +125,7 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id
         # Re-raise HTTP exceptions
         raise he
     except Exception as e:
-        logger.error(f"Error fetching vendor data from collection '{category_name}' for vendor_id '{vendor_id}': {e}", exc_info=True)
+        logger.error(f"Error fetching vendor data from collection '{category_name}' for vendor_name '{vendor_name}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error fetching vendor data from database"
@@ -139,7 +152,6 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id
     # 5. Create the SelectedVendorInfo object with fetched data
     selected_vendor_info = SelectedVendorInfo(
         category_name=category_name,
-        vendor_id=vendor_id,
         title=vendor_title,
         city=vendor_city,
         rating=vendor_rating,
@@ -147,22 +159,24 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id
     )
 
     # 6. Add/Update selected_vendors list in the plan
-    #    Logic: If the same vendor (by vendor_id and category_name) is already selected, update it.
-    #    Otherwise, append it. This allows for multiple selections within a category if vendor_ids differ.
+    #    Logic: If the same vendor (by vendor name and category_name) is already selected, update it.
+    #    Otherwise, append it. This allows for multiple selections within a category if vendor names differ.
     existing_vendor_index = -1
     for i, sv in enumerate(plan.selected_vendors):
-        if sv.category_name == category_name and sv.vendor_id == vendor_id:
+        if (sv.category_name == category_name and 
+            sv.title and vendor_title and 
+            sv.title.lower().strip() == vendor_title.lower().strip()):
             existing_vendor_index = i
             break
 
     if existing_vendor_index != -1:
         # Update existing entry
         plan.selected_vendors[existing_vendor_index] = selected_vendor_info
-        logger.info(f"Updated existing selected vendor '{vendor_id}' for category '{category_name}'.")
+        logger.info(f"Updated existing selected vendor '{vendor_name}' for category '{category_name}'.")
     else:
         # Add new entry
         plan.selected_vendors.append(selected_vendor_info)
-        logger.info(f"Added new selected vendor '{vendor_id}' to category '{category_name}'.")
+        logger.info(f"Added new selected vendor '{vendor_name}' to category '{category_name}'.")
 
     # 7. Save the updated plan to the database
     try:
@@ -171,7 +185,7 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_id
             {"reference_id": reference_id},
             {"$set": plan.model_dump()}
         )
-        logger.info(f"Budget plan '{reference_id}' successfully updated with selected vendor '{vendor_id}'.")
+        logger.info(f"Budget plan '{reference_id}' successfully updated with selected vendor '{vendor_name}'.")
     except Exception as e:
         logger.error(f"Error saving updated budget plan for reference_id '{reference_id}' to DB: {e}", exc_info=True)
         raise HTTPException(
