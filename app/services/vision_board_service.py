@@ -210,7 +210,9 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
                 detail="Reference ID is missing. Please provide a reference ID for your vision board."
             )
             
-            
+        # Extract events from the request for the response
+        request_events = user.get("events", []) or []
+        
         # 1) Fetch matching docs
         docs = get_matching_boards(user, limit=10)
 
@@ -284,6 +286,7 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
             "title": title,
             "summary": summary,
             "boards": [b.dict() for b in board_items],
+            "events": request_events,  # Added events from the request
             "response_type": "vision_board"
         }
 
@@ -317,6 +320,15 @@ async def get_vision_boards_by_id(reference_id: str) -> List[VisionBoardResponse
             raise HTTPException(status_code=500,detail="No vision boards found for this reference ID")
 
         logger.info(f"Successfully retrieved {len(board_docs)} vision board(s) for reference_id: {reference_id}")
+        
+        # Handle backward compatibility for documents that might not have the events field
+        for doc in board_docs:
+            if "events" not in doc:
+                # Try to extract events from the request field if it exists
+                if "request" in doc and "events" in doc["request"]:
+                    doc["events"] = doc["request"]["events"]
+                else:
+                    doc["events"] = []  # Default to empty list
         
         # Validate each retrieved document against the VisionBoardResponse Pydantic model
         # This will create a list of VisionBoardResponse objects

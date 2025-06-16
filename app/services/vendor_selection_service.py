@@ -11,6 +11,76 @@ from app.config import settings
 
 BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION 
 
+def get_category_to_collection_mapping() -> Dict[str, str]:
+    """
+    Maps category names to their corresponding database collection names.
+    
+    Returns:
+        Dict[str, str]: Mapping of category names to collection names
+    """
+    return {
+        "venue": "venues",
+        "venues": "venues",
+        "caterer": "catering",
+        "catering": "catering",
+        "photography": "photographers",
+        "photographer": "photographers",
+        "photographers": "photographers",
+        "bridal_wear": "bridal_wear",
+        "car": "car",
+        "decor": "decors",
+        "decors": "decors",
+        "dj": "djs",
+        "djs": "djs",
+        "honeymoon": "honeymoon",
+        "jewellery": "jewellery",
+        "makeup": "makeups",
+        "makeups": "makeups",
+        "mehendi": "mehendi",
+        "wedding_planner": "wedding_planner",
+        "wedding_invitation": "weddingInvitations",
+        "wedding_invitations": "weddingInvitations",
+        "invitations": "weddingInvitations"
+    }
+
+def get_collection_name_from_category(category_name: str) -> str:
+    """
+    Gets the database collection name for a given category name.
+    
+    Args:
+        category_name (str): The category name
+        
+    Returns:
+        str: The corresponding collection name
+        
+    Raises:
+        HTTPException: If the category is not supported
+    """
+    category_mapping = get_category_to_collection_mapping()
+    
+    # Convert to lowercase for case-insensitive matching
+    normalized_category = category_name.lower().strip()
+    
+    if normalized_category in category_mapping:
+        return category_mapping[normalized_category]
+    
+    # If direct mapping not found, check if it's already a valid collection name
+    valid_collections = {
+        "bridal_wear", "car", "catering", "decors", "djs", "honeymoon",
+        "jewellery", "makeups", "mehendi", "photographers", "venues",
+        "wedding_planner", "weddingInvitations"
+    }
+    
+    if normalized_category in valid_collections:
+        return normalized_category
+    
+    # Category not found
+    available_categories = list(category_mapping.keys()) + list(valid_collections)
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Invalid category '{category_name}'. Available categories: {sorted(set(available_categories))}"
+    )
+
 def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_name: str) -> BudgetPlanDBSchema:
     """
     Adds or updates a selected vendor to the user's budget plan within a specific category.
@@ -31,14 +101,13 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_na
     logger.info(f"Attempting to add/update selected vendor for reference_id '{reference_id}', "
                 f"category '{category_name}', vendor_name '{vendor_name}'")
 
-    # 1. Validate the category name against dynamically available categories
-    available_collections = get_available_vendor_categories()
-    if category_name not in available_collections:
-        logger.warning(f"Invalid category '{category_name}' provided for vendor selection. Available: {available_collections}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid category '{category_name}'. Not a supported vendor category. Available: {available_collections}"
-        )
+    # 1. Map category name to collection name and validate
+    try:
+        collection_name = get_collection_name_from_category(category_name)
+        logger.info(f"Mapped category '{category_name}' to collection '{collection_name}'")
+    except HTTPException as he:
+        logger.warning(f"Invalid category '{category_name}' provided for vendor selection.")
+        raise he
 
     # 2. Validate vendor_name (should not be empty)
     if not vendor_name or not vendor_name.strip():
@@ -53,12 +122,12 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_na
     # 3. Fetch vendor data from the corresponding collection
     try:
         # Detect field structure for this collection
-        field_map = detect_field_structure(category_name)
+        field_map = detect_field_structure(collection_name)
         if not field_map:
-            logger.error(f"Could not detect field structure for collection '{category_name}'")
+            logger.error(f"Could not detect field structure for collection '{collection_name}'")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Could not process vendor data from collection '{category_name}'"
+                detail=f"Could not process vendor data from collection '{collection_name}'"
             )
 
         # Build projection based on detected fields
@@ -69,20 +138,20 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_na
         # Search for vendor by name using the detected title field
         title_field = field_map.get("title")
         if not title_field:
-            logger.error(f"Could not detect title field for collection '{category_name}'")
+            logger.error(f"Could not detect title field for collection '{collection_name}'")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Could not identify name field in collection '{category_name}'"
+                detail=f"Could not identify name field in collection '{collection_name}'"
             )
 
         # Use case-insensitive regex search for vendor name
-        vendor_doc = db[category_name].find_one(
+        vendor_doc = db[collection_name].find_one(
             {title_field: {"$regex": f"^{vendor_name}$", "$options": "i"}}, 
             projection
         )
         
         if not vendor_doc:
-            logger.warning(f"Vendor with name '{vendor_name}' not found in collection '{category_name}'")
+            logger.warning(f"Vendor with name '{vendor_name}' not found in collection '{collection_name}'")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Vendor with name '{vendor_name}' not found in category '{category_name}'"
@@ -125,7 +194,7 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_na
         # Re-raise HTTP exceptions
         raise he
     except Exception as e:
-        logger.error(f"Error fetching vendor data from collection '{category_name}' for vendor_name '{vendor_name}': {e}", exc_info=True)
+        logger.error(f"Error fetching vendor data from collection '{collection_name}' for vendor_name '{vendor_name}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error fetching vendor data from database"

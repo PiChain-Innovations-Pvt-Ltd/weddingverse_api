@@ -24,4 +24,5 @@ class VisionBoardResponse(BaseModel):
     title:        Optional[str]
     summary:      Optional[str]
     boards:       List[BoardItem]
+    events:       Optional[List[str]] = [] 
     response_type:str
