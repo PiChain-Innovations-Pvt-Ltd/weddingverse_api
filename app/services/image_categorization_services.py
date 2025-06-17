@@ -9,6 +9,9 @@ from dateutil import tz
 from urllib.parse import urlparse
 
 import google.generativeai as genai
+import vertexai
+from vertexai.preview.generative_models import GenerativeModel, Part
+from google.oauth2 import service_account
 from fastapi import HTTPException
 
 from app.services.vision_board_service import get_matching_boards
@@ -22,22 +25,24 @@ VISION_BOARD_COLLECTION = settings.VISION_BOARD_COLLECTION
 
 # ─── Gemini setup ───────────────────────────────────────────────────────────────
 genai.configure(api_key=GEMINI_API_KEY)
+try:
+    credentials = service_account.Credentials.from_service_account_file(settings.CREDENTIALS_PATH)
+    vertexai.init(project=settings.PROJECT_ID, location=settings.REGION, credentials=credentials)
+    logger.info("Vertex AI initialized successfully.")
+except Exception as e:
+    logger.error(f"Failed to initialize Vertex AI: {e}")
+    raise RuntimeError(f"Failed to initialize Vertex AI: {e}. Application cannot proceed.")
+
 IMG_MODEL_CONFIG = {
     "temperature":       0.2,
     "top_p":             1,
     "top_k":             32,
     "max_output_tokens": 4096,
 }
-SAFETY_SETTINGS = [
-    {"category": "HARM_CATEGORY_HARASSMENT",       "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH",       "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-]
-model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash",
-    generation_config=IMG_MODEL_CONFIG,
-    safety_settings=SAFETY_SETTINGS,
+
+model = GenerativeModel(
+    model_name=settings.MODEL_NAME,
+    generation_config=IMG_MODEL_CONFIG
 )
 
 def _prepare_image_bytes(
@@ -129,6 +134,7 @@ def _get_gemini_metadata(image_info: Dict[str, Any]) -> Dict[str, Any]:
         Ensure "Colors" are always returned as lists, even if empty.
     """
     try:
+        image_info = Part.from_data(data=image_info["data"], mime_type=image_info["mime_type"])
         resp = model.generate_content([system_prompt, image_info, user_prompt])
         text = resp.text.strip()
     except Exception:
@@ -257,6 +263,7 @@ async def categorize_and_match(
                 title=       title,
                 summary=     summary,
                 boards=      boards,
+                events=      events,
                 response_type="categorization"
             ).dict()
 
@@ -282,7 +289,7 @@ async def categorize_bulk(
 
     # 1) Prepare a list of image_info dicts
     image_infos = [
-        _prepare_image_bytes(b, ct, None)
+        Part.from_data(data=b, mime_type=ct)
         for b, ct in zip(upload_bytes_list, content_types)
     ]
 
@@ -421,6 +428,7 @@ async def categorize_bulk(
         title=        title,
         summary=      summary,
         boards=       boards,
+        events=       events,
         response_type="categorization"
     ).dict()
     # persist & strip _id

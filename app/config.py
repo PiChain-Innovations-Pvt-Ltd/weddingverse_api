@@ -36,6 +36,10 @@ class Settings(BaseSettings):
 
     # Gemini / GenAI
     gemini_api_key:          str = Field(..., env="GEMINI_API_KEY")
+    CREDENTIALS_PATH:        str = Field(..., env="CREDENTIALS_PATH")
+    PROJECT_ID:              str = Field(..., env="PROJECT_ID")
+    REGION:                  str = Field(..., env="REGION")
+    MODEL_NAME:              str = Field(..., env="MODEL_NAME")
 
     # JWT Auth
     jwt_secret_key:          str = Field(..., env="JWT_SECRET_KEY")
