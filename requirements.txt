@@ -11,4 +11,5 @@ python-jose[cryptography]
 httpx
 gspread
 google-auth-oauthlib
-google-auth   
+google-auth 
+vertexai  

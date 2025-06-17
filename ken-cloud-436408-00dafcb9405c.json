@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ken-cloud-436408",
+  "private_key_id": "00dafcb9405c7c3ffe72c3c948047d301112c506",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDMqampoT2SRqtT\n/vO18jc4R/3pENEsrF2eT7Bwv0P+qhXenlMXbFlFtJVOTOVOnn3ppMigC8h3m7eG\n20uXByp44Dn02ZkQFLTvm7itQitgTI5aL0GQqQTVna3P6EIwHDgFMSkRKPdbLue4\n7vqv6KwvBWMeKl7JtOn14ro/lUI2NLEJ5/fuCrdNZNeqmi/G0qZvOO9qnE7mZQzC\nChOsuqjoxLAkNTitwBNM+BiKheOdmQdyd8btao/MZdz4PiOK3lfOOy2ZzdLfFMkz\nXuyEarUJbNFOUV1elcySoqrDNtgxWHK8xx7VSZOkF1sK99kyvEQodKI3I9sHT5w9\nO7eJimkpAgMBAAECggEAFyASnNQByN31rPOGu9J8cn5mo9JJIw2aNHGtA52xA/0E\nT0JqLCA2LsilWD1waZjsrEejfbtnHDtlmjYm4o/7jhXz+9p8ej3aEKWdUUJunp53\n3/EtV42pj1jrk1hF5k7B9mA5fjK3+b8hOBsUthIJ0UmqtfVeqYGo2qY9mkKgwnla\nT1b17rjvjhrPsUQfu0FRUQWMuz2dYnTnPw32HkxLzZIa0aS7KFajDPLPoTzNzyNn\nzBlXu6paWHHOnetIQ7yr1UvaPaLhe5MPQW0MgaM4zSaZnKFee8grWx65TfhLz8Ac\nAaX/1wPe7ovuTSM16ePKWeK8QO8jUgsA3PJh1Fj4EwKBgQDlsdfOL8UKMKFiF1uE\nZqeW2Wq9JUN10EIYVcmR1IWMNxRe770QBsXatw3eF58k9+9wLMdwN8uTXZ7/+D86\nSdrAr0kXFvsD1B8kfRK3cJqNc65/O8YKTqudcPvfrelecxbbfpxduL5ereKU5tvy\nAJxgrw+n2LWP8m3sNHPz8+hSJwKBgQDkGe+5/9tcytGg73TRgVqpc8rxmkHmgMsy\nSEqhYBhqROAqog5Vf895BaDfc7LhtBx7d0UA1JTojNkLk2tP3rQgsHsZ1IbLtVO6\nHhLMttncCR0980I1s2wIID+pI80sw8Lr6JN8Zvd4zC9LR/JWDFrkWvya36c3XUiz\nBr/d2xqMLwKBgQDChwZccapvQdY7a8qu6/18zO8P91IVoeWIFIdcgN8Fa9RNvr2g\nqAvCeos9D0ZRmcTnfJT/XdGEIaK557UsmUWxMAI3ktfNW0Vwspg6URwjNdiPmsDT\nE+NVuE0oF3Jv8gpmo+irmv1m097z+jxFzOyjGT+qB+dkXI1poNaewW98uwKBgQDi\nygbX39OyxtT2Nh7nzrzdjgtRfBXZoGRncgkBuhGMVz6qJMYrrBAUO8xfXyGT1wga\nmdM5qCMFtER4hfJETyC4/77lR7FeCMNeYVg/we2KIGW6mopR6jqXObkR6k6tG1ZK\nR8ub/KRAroK3TqlbdJ1KPky5j3UqTs1hcmyBoL8ccQKBgQDdxg01ulX7lFFL56cV\nS+aW9jKrsO56IZ1OkXhH06NnPgd4MsSmsRwF4L9sCDjs2PL2p4qKl29FOZzLrlPE\n83gc/Ef4RJt/HDjdKWo1apc/e1MMIUIDNNzNy+7k1MToKxqSrKK1ApbYnstBC+zs\ng2MXhLkC5w30BRFNfdKnNkG6dQ==\n-----END PRIVATE KEY-----\n",
+  "client_email": "vertex-ai-weddingverse@ken-cloud-436408.iam.gserviceaccount.com",
+  "client_id": "107710960269640448571",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/vertex-ai-weddingverse%40ken-cloud-436408.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
