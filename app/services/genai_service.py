@@ -11,7 +11,7 @@ GEMINI_API_KEY = settings.gemini_api_key
 
 genai.configure(api_key=GEMINI_API_KEY)
 try:
-    credentials = service_account.Credentials.from_service_account_file(settings.CREDENTIALS_PATH)
+    credentials = service_account.Credentials.from_service_account_info(settings.GOOGLE_APPLICATION_CREDENTIALS)
     vertexai.init(project=settings.PROJECT_ID, location=settings.REGION, credentials=credentials)
     logger.info("Vertex AI initialized successfully.")
 except Exception as e:
