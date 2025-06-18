@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from dateutil import tz
+from bson import ObjectId
 
 from fastapi import HTTPException
 from pymongo import ASCENDING
@@ -10,7 +11,7 @@ from typing import List
 from app.services.mongo_service import db
 from app.config import settings, FIELD_MAP
 from app.services.genai_service import model
-from app.models.vision_board import BoardItem, VisionBoardRequest, VisionBoardResponse
+from app.models.vision_board import BoardItem, VisionBoardRequest, VisionBoardResponse, CategoryImagesResponse, ImageVendorMapping  # MODIFIED: Added ImageVendorMapping
 from app.utils.logger import logger
 
 IMAGE_INPUT_COLLECTION = settings.image_input_collection
@@ -39,14 +40,36 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
         criteria.append(("field", key, user[key], db_field))
 
     for ev in events:
+        # Events are in data.Events
         conds.append({
-            "$cond": [{"$in": [ev, "$data.Events"]}, 1, 0]
+            "$cond": [
+                {
+                    "$and": [
+                        {"$ne": ["$data.Events", None]},
+                        {"$isArray": "$data.Events"},
+                        {"$in": [ev, "$data.Events"]}
+                    ]
+                }, 
+                1, 
+                0
+            ]
         })
         criteria.append(("event", ev, None, "data.Events"))
 
     for clr in colors:
+        # Colors are in data.Colors, but we need colorList for comparison
         conds.append({
-            "$cond": [{"$in": [clr, "$colorList"]}, 1, 0]
+            "$cond": [
+                {
+                    "$and": [
+                        {"$ne": ["$colorList", None]},
+                        {"$isArray": "$colorList"},
+                        {"$in": [clr, "$colorList"]}
+                    ]
+                }, 
+                1, 
+                0
+            ]
         })
         criteria.append(("color", clr, None, "data.Colors"))
 
@@ -56,17 +79,28 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
         {
             "$addFields": {
                 "colorList": {
-                    "$map": {
-                        "input": "$data.Colors",
-                        "as": "c",
-                        "in": "$$c.color"
-                    }
+                    "$cond": [
+                        {
+                            "$and": [
+                                {"$ne": ["$data.Colors", None]},
+                                {"$isArray": "$data.Colors"}
+                            ]
+                        },
+                        {
+                            "$map": {
+                                "input": "$data.Colors",
+                                "as": "c",
+                                "in": "$c.color"
+                            }
+                        },
+                        []  # Default to empty array if Colors is missing or not an array
+                    ]
                 }
             }
         },
         {
             "$addFields": {
-                "matchCount": {"$add": conds}
+                "matchCount": {"$add": conds} if conds else {"$literal": 0}
             }
         },
         {"$sort": {"matchCount": -1}},
@@ -74,6 +108,7 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
             "$project": {
                 "_id": 0,
                 "image_link": 1,
+                "vendor_id": 1,  # MODIFIED: Include vendor_id in projection
                 "data.Events": 1,
                 "data.Colors": 1,
                 "matchCount": 1,
@@ -89,9 +124,20 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
     except OperationFailure as e:
         logger.warning("Aggregation failed (%s); falling back.", e)
         cursor = db[IMAGE_INPUT_COLLECTION] \
-                   .find({}, {"_id": 0, "image_link": 1, "data.Colors": 1}) \
+                   .find({}, {"_id": 0, "image_link": 1, "vendor_id": 1, "data.Colors": 1, "data.Events": 1}) \
                    .sort("_id", ASCENDING).limit(limit)
-        return [{**d, "matchCount": 0} for d in cursor]
+        fallback_docs = []
+        for d in cursor:
+            # Ensure data structure exists
+            if "data" not in d:
+                d["data"] = {}
+            if "Colors" not in d["data"]:
+                d["data"]["Colors"] = []
+            if "Events" not in d["data"]:
+                d["data"]["Events"] = []
+            d["matchCount"] = 0
+            fallback_docs.append(d)
+        return fallback_docs
 
     docs = []
     if total_fields > 0:
@@ -105,23 +151,29 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
             full_doc = db[IMAGE_INPUT_COLLECTION].find_one(
                 {"image_link": first_link},
                 {"_id": 0, "data": 1}
-            )["data"]
+            )
+            
+            # Extract data section
+            doc_data = full_doc.get("data", {}) if full_doc else {}
 
             matched_names = []
 
             for key in provided:
-                data_key = FIELD_MAP[key].split(".", 1)[1]
-                if full_doc.get(data_key) == user[key]:
+                data_key = FIELD_MAP[key].split(".", 1)[1]  # Remove "data." prefix
+                if doc_data.get(data_key) == user[key]:
                     matched_names.append(f"{key}={user[key]}")
 
             for ev in events:
-                if ev in full_doc.get("Events", []):
+                events_list = doc_data.get("Events", [])
+                if isinstance(events_list, list) and ev in events_list:
                     matched_names.append(f"event:{ev}")
 
             for clr in colors:
-                color_values = [c.get("color") for c in full_doc.get("Colors", [])]
-                if clr in color_values:
-                    matched_names.append(f"color:{clr}")
+                colors_data = doc_data.get("Colors", [])
+                if isinstance(colors_data, list):
+                    color_values = [c.get("color") for c in colors_data if isinstance(c, dict)]
+                    if clr in color_values:
+                        matched_names.append(f"color:{clr}")
 
             logger.info(
                 f"Matched {len(docs)} docs with {target}/{total_fields} criteria. "
@@ -132,9 +184,20 @@ def get_matching_boards(user: dict, limit: int = 10) -> list[dict]:
     if not docs:
         logger.warning("No close matches; returning first %d docs.", limit)
         cursor = db[IMAGE_INPUT_COLLECTION] \
-                   .find({}, {"_id": 0, "image_link": 1, "data.Colors": 1}) \
+                   .find({}, {"_id": 0, "image_link": 1, "vendor_id": 1, "data.Colors": 1, "data.Events": 1}) \
                    .sort("_id", ASCENDING).limit(limit)
-        docs = [{**d, "matchCount": 0} for d in cursor]
+        fallback_docs = []
+        for d in cursor:
+            # Ensure data structure exists
+            if "data" not in d:
+                d["data"] = {}
+            if "Colors" not in d["data"]:
+                d["data"]["Colors"] = []
+            if "Events" not in d["data"]:
+                d["data"]["Events"] = []
+            d["matchCount"] = 0
+            fallback_docs.append(d)
+        docs = fallback_docs
 
     return docs
 
@@ -216,22 +279,53 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
         # 1) Fetch matching docs
         docs = get_matching_boards(user, limit=10)
 
-        # collect every image_link
-        image_links = [doc["image_link"] for doc in docs]
+        # MODIFIED: collect image_links and create vendor mappings
+        image_links = []
+        vendor_mappings = []
+        
+        for doc in docs:
+            image_link = doc.get("image_link")
+            vendor_id = doc.get("vendor_id")
+            
+            if image_link:
+                image_links.append(image_link)
+                
+                # Convert vendor_id to string representation "ObjectId('...')"
+                if vendor_id:
+                    if isinstance(vendor_id, ObjectId):
+                        vendor_id_str = f"ObjectId('{str(vendor_id)}')"
+                    else:
+                        # If it's already a string, wrap it properly
+                        vendor_id_str = f"ObjectId('{vendor_id}')"
+                    
+                    vendor_mappings.append(ImageVendorMapping(
+                        image_link=image_link,
+                        vendor_id=vendor_id_str
+                    ))
 
-        # flatten + dedupe every color
-        color_set = {
-            c["color"]
-            for doc in docs
-            for c in doc["data"]["Colors"]
-        }
+        # FIXED: Extract colors from data.Colors based on exact structure
+        color_set = set()
+        for doc in docs:
+            # Get data section first
+            doc_data = doc.get("data", {})
+            colors_list = doc_data.get("Colors", [])
+            
+            if isinstance(colors_list, list):
+                for color_item in colors_list:
+                    if isinstance(color_item, dict) and "color" in color_item:
+                        color_name = color_item["color"]
+                        if color_name:  # Make sure it's not empty
+                            color_set.add(color_name)
+        
         colors = list(color_set)
+        logger.info(f"Extracted {len(colors)} colors: {colors}")
 
-        # instantiate one BoardItem
+        # MODIFIED: instantiate BoardItem with vendor mappings
         board_items = [
             BoardItem(
                 image_links=image_links,
-                colors=      colors
+                colors=colors,
+                vendor_mappings=vendor_mappings
             )
         ]
 
@@ -329,6 +423,11 @@ async def get_vision_boards_by_id(reference_id: str) -> List[VisionBoardResponse
                     doc["events"] = doc["request"]["events"]
                 else:
                     doc["events"] = []  # Default to empty list
+            
+            # MODIFIED: Handle backward compatibility for vendor_mappings
+            for board in doc.get("boards", []):
+                if "vendor_mappings" not in board:
+                    board["vendor_mappings"] = []  # Default to empty list
         
         # Validate each retrieved document against the VisionBoardResponse Pydantic model
         # This will create a list of VisionBoardResponse objects
@@ -340,3 +439,201 @@ async def get_vision_boards_by_id(reference_id: str) -> List[VisionBoardResponse
     except Exception as e:
         logger.error(f"Error retrieving vision boards for reference_id '{reference_id}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    
+
+# async def get_vision_board_images_by_category(reference_id: str, category: str) -> CategoryImagesResponse:
+#     """
+#     Get all image links from vision boards filtered by category (venue, decor, attire)
+#     Handles frontend-database category name mapping
+#     """
+    
+#     logger.info(f"Retrieving {category} images for reference_id: {reference_id}")
+    
+#     try:
+#         # Find all vision boards for the reference_id
+#         cursor = db[VISION_BOARD_COLLECTION].find(
+#             {"reference_id": reference_id},
+#             {"_id": 0, "boards": 1}
+#         )
+        
+#         board_docs = list(cursor)
+        
+#         if not board_docs:
+#             logger.warning(f"No vision boards found for reference_id '{reference_id}'")
+#             raise HTTPException(
+#                 status_code=404, 
+#                 detail="No vision boards found for this reference ID"
+#             )
+        
+#         # MODIFIED: Collect image links and vendor mappings from all boards
+#         all_image_links = []
+#         all_vendor_mappings = []
+        
+#         for doc in board_docs:
+#             boards = doc.get("boards", [])
+#             for board in boards:
+#                 image_links = board.get("image_links", [])
+#                 vendor_mappings = board.get("vendor_mappings", [])
+                
+#                 all_image_links.extend(image_links)
+#                 all_vendor_mappings.extend(vendor_mappings)
+        
+#         # UPDATED: Enhanced category keyword mapping for frontend-database mismatch
+#         category_keywords = {
+#             "attire": ["brideWear"]
+#         }
+        
+#         keywords = category_keywords.get(category.lower(), [category.lower()])
+        
+#         # MODIFIED: Filter images and vendor mappings by category
+#         filtered_images = []
+#         filtered_vendor_mappings = []
+        
+#         for image_link in all_image_links:
+#             # Check if any of the category keywords appear in the image link
+#             if any(keyword.lower() in image_link.lower() for keyword in keywords):
+#                 filtered_images.append(image_link)
+                
+#                 # Find corresponding vendor mapping
+#                 for mapping in all_vendor_mappings:
+#                     if mapping.get("image_link") == image_link:
+#                         vendor_id = mapping.get("vendor_id")
+                        
+#                         # Convert vendor_id to string representation "ObjectId('...')"
+#                         if vendor_id:
+#                             if isinstance(vendor_id, ObjectId):
+#                                 vendor_id_str = f"ObjectId('{str(vendor_id)}')"
+#                             else:
+#                                 # If it's already a string, wrap it properly
+#                                 vendor_id_str = f"ObjectId('{vendor_id}')"
+                            
+#                             filtered_vendor_mappings.append(ImageVendorMapping(
+#                                 image_link=mapping["image_link"],
+#                                 vendor_id=vendor_id_str
+#                             ))
+#                         break
+        
+#         # Remove duplicates while preserving order
+#         unique_filtered_images = list(dict.fromkeys(filtered_images))
+        
+#         # Remove duplicate vendor mappings based on image_link
+#         seen_images = set()
+#         unique_vendor_mappings = []
+#         for mapping in filtered_vendor_mappings:
+#             if mapping.image_link not in seen_images:
+#                 unique_vendor_mappings.append(mapping)
+#                 seen_images.add(mapping.image_link)
+        
+#         logger.info(f"Found {len(unique_filtered_images)} unique {category} images for reference_id: {reference_id}")
+        
+#         return CategoryImagesResponse(
+#             reference_id=reference_id,
+#             category=category,
+#             #image_links=unique_filtered_images,
+#             vendor_mappings=unique_vendor_mappings,
+#             total_count=len(unique_filtered_images)
+#         )
+        
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"Error filtering {category} images for reference_id '{reference_id}': {e}", exc_info=True)
+#         raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+async def get_vision_board_images_by_category(reference_id: str, category: str) -> CategoryImagesResponse:
+    """
+    Get all image links from vision boards filtered by category (venue, decor, attire)
+    Handles frontend-database category name mapping
+    """
+    
+    logger.info(f"Retrieving {category} images for reference_id: {reference_id}")
+    
+    try:
+        # Find all vision boards for the reference_id
+        cursor = db[VISION_BOARD_COLLECTION].find(
+            {"reference_id": reference_id},
+            {"_id": 0, "boards": 1}
+        )
+        
+        board_docs = list(cursor)
+        
+        if not board_docs:
+            logger.warning(f"No vision boards found for reference_id '{reference_id}'")
+            raise HTTPException(
+                status_code=404, 
+                detail="No vision boards found for this reference ID"
+            )
+        
+        # MODIFIED: Collect vendor mappings from all boards
+        all_vendor_mappings = []
+        
+        for doc in board_docs:
+            boards = doc.get("boards", [])
+            for board in boards:
+                vendor_mappings = board.get("vendor_mappings", [])
+                all_vendor_mappings.extend(vendor_mappings)
+        
+        # UPDATED: Enhanced category keyword mapping for frontend-database mismatch
+        category_keywords = {
+            "attire": ["brideWear"]
+        }
+        
+        keywords = category_keywords.get(category.lower(), [category.lower()])
+        
+        # MODIFIED: Filter vendor mappings by category using image_link in vendor_mappings
+        filtered_vendor_mappings = []
+        
+        for mapping in all_vendor_mappings:
+            image_link = mapping.get("image_link", "")
+            
+            # Check if any of the category keywords appear in the image link
+            if any(keyword.lower() in image_link.lower() for keyword in keywords):
+                vendor_id = mapping.get("vendor_id")
+                
+                # Convert vendor_id to string representation "ObjectId('...')"
+                if vendor_id:
+                    if isinstance(vendor_id, ObjectId):
+                        vendor_id_str = f"ObjectId('{str(vendor_id)}')"
+                    else:
+                        # If it's already a string, wrap it properly
+                        vendor_id_str = f"ObjectId('{vendor_id}')"
+                    
+                    filtered_vendor_mappings.append(ImageVendorMapping(
+                        image_link=image_link,
+                        vendor_id=vendor_id_str
+                    ))
+        
+        # Remove duplicate vendor mappings based on image_link
+        seen_images = set()
+        unique_vendor_mappings = []
+        for mapping in filtered_vendor_mappings:
+            if mapping.image_link not in seen_images:
+                unique_vendor_mappings.append(mapping)
+                seen_images.add(mapping.image_link)
+        
+        logger.info(f"Found {len(unique_vendor_mappings)} unique {category} images for reference_id: {reference_id}")
+        
+        return CategoryImagesResponse(
+            reference_id=reference_id,
+            category=category,
+            vendor_mappings=unique_vendor_mappings,
+            total_count=len(unique_vendor_mappings)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error filtering {category} images for reference_id '{reference_id}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    
+def get_category_regex(category: str) -> str:
+    """
+    Get regex pattern for category matching with broader keyword support
+    """
+    category_patterns = {
+        "venue": r"venue|hall|resort|lawn|garden|beach|hotel|banquet",
+        "decor": r"decor|decoration|flower|floral|lighting|backdrop|centerpiece",
+        "attire": r"attire|fashion|dress|outfit|clothing|wear|lehenga|saree|suit|gown"
+    }
+    
+    return category_patterns.get(category.lower(), category.lower())
