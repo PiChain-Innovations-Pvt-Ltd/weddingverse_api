@@ -734,7 +734,7 @@ async def categorize_and_match(
             }
 
             result = db[VISION_BOARD_COLLECTION].update_one(
-                {"reference_id": reference_id, "response_type": "categorization"},
+                {"reference_id": reference_id},
                 {"$set": output},
                 upsert=True
             )
@@ -935,7 +935,7 @@ async def categorize_bulk(
     
     # persist & strip _id
     result = db[VISION_BOARD_COLLECTION].update_one(
-        {"reference_id": reference_id, "response_type": "categorization"},
+        {"reference_id": reference_id},
         {"$set": output},
         upsert=True
     )
