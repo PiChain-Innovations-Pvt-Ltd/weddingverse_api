@@ -14,9 +14,17 @@ class Color(BaseModel):
     color:       str
     description: Optional[str]
 
+class ImageVendorMapping(BaseModel):
+    image_link: str
+    vendor_id: str
+    
+class VendorImage(BaseModel):
+    image_link:str
+
 class BoardItem(BaseModel):
-    image_links: List[str]
+    #image_links: List[str]
     colors:      List[str]
+    vendor_mappings: List[ImageVendorMapping]  # New field for vendor mapping
 
 class VisionBoardResponse(BaseModel):
     reference_id: str
@@ -25,4 +33,18 @@ class VisionBoardResponse(BaseModel):
     summary:      Optional[str]
     boards:       List[BoardItem]
     events:       Optional[List[str]] = [] 
-    response_type:str
+    response_type: str
+
+class CategoryImagesResponse(BaseModel):
+    reference_id: str
+    category: str
+    #image_links: List[str]
+    vendor_mappings: List[VendorImage]  # New field for vendor mapping
+    total_count: int 
+    titles: List[str] = []
+    
+class EventImagesResponse(BaseModel):
+    reference_id: str
+    event: str
+    vendor_mappings: List[VendorImage]
+    total_count: int
