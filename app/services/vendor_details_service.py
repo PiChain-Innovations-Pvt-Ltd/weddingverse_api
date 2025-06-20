@@ -11,7 +11,7 @@ from app.services.vendor_discovery_service import get_available_vendor_categorie
 
 # Collections that are NOT vendor collections (re-using from vendor_discovery_service)
 EXCLUDED_COLLECTIONS = {
-    "budget_plans", "chat_conversations", "conversations", 
+    "budget_planner", "chat_conversations", "conversations", 
     "image_description", "WeddingVerse_Output", "Vison_Board"
 }
 
