@@ -265,6 +265,13 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
                 status_code=400,
                 detail="Events selection is missing. Please specify at least one event for your vision board."
             )
+        
+        if not user.get("location") or len(user.get("location", [])) == 0:
+            logger.warning("Missing Location field")
+            raise HTTPException(
+                status_code=400,
+                detail="Location selection is missing. Please specify Location for your vision board."
+            )
             
         if not user.get("reference_id") or user.get("reference_id") == "":
             logger.warning("Missing reference_id field")
@@ -370,6 +377,7 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
 
         # 6) Build output document
         ref_id = req.reference_id
+        loc = req.location
         ist = tz.gettz("Asia/Kolkata")
         timestamp = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -381,6 +389,7 @@ def create_vision_board(req: VisionBoardRequest) -> dict:
             "summary": summary,
             "boards": [b.dict() for b in board_items],
             "events": request_events,  # Added events from the request
+            "location": loc,
             "response_type": "vision_board"
         }
 
@@ -452,195 +461,6 @@ async def get_vision_boards_by_id(reference_id: str) -> List[VisionBoardResponse
         logger.error(f"Error retrieving vision boards for reference_id '{reference_id}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
     
-
-# async def get_vision_board_images_by_category(reference_id: str, category: str) -> CategoryImagesResponse:
-#     """
-#     Get all image links from vision boards filtered by category (venue, decor, attire)
-#     Handles frontend-database category name mapping
-#     """
-    
-#     logger.info(f"Retrieving {category} images for reference_id: {reference_id}")
-    
-#     try:
-#         # Find all vision boards for the reference_id
-#         cursor = db[VISION_BOARD_COLLECTION].find(
-#             {"reference_id": reference_id},
-#             {"_id": 0, "boards": 1}
-#         )
-        
-#         board_docs = list(cursor)
-        
-#         if not board_docs:
-#             logger.warning(f"No vision boards found for reference_id '{reference_id}'")
-#             raise HTTPException(
-#                 status_code=404, 
-#                 detail="No vision boards found for this reference ID"
-#             )
-        
-#         # MODIFIED: Collect image links and vendor mappings from all boards
-#         all_image_links = []
-#         all_vendor_mappings = []
-        
-#         for doc in board_docs:
-#             boards = doc.get("boards", [])
-#             for board in boards:
-#                 image_links = board.get("image_links", [])
-#                 vendor_mappings = board.get("vendor_mappings", [])
-                
-#                 all_image_links.extend(image_links)
-#                 all_vendor_mappings.extend(vendor_mappings)
-        
-#         # UPDATED: Enhanced category keyword mapping for frontend-database mismatch
-#         category_keywords = {
-#             "attire": ["brideWear"]
-#         }
-        
-#         keywords = category_keywords.get(category.lower(), [category.lower()])
-        
-#         # MODIFIED: Filter images and vendor mappings by category
-#         filtered_images = []
-#         filtered_vendor_mappings = []
-        
-#         for image_link in all_image_links:
-#             # Check if any of the category keywords appear in the image link
-#             if any(keyword.lower() in image_link.lower() for keyword in keywords):
-#                 filtered_images.append(image_link)
-                
-#                 # Find corresponding vendor mapping
-#                 for mapping in all_vendor_mappings:
-#                     if mapping.get("image_link") == image_link:
-#                         vendor_id = mapping.get("vendor_id")
-                        
-#                         # Convert vendor_id to string representation "ObjectId('...')"
-#                         if vendor_id:
-#                             if isinstance(vendor_id, ObjectId):
-#                                 vendor_id_str = f"ObjectId('{str(vendor_id)}')"
-#                             else:
-#                                 # If it's already a string, wrap it properly
-#                                 vendor_id_str = f"ObjectId('{vendor_id}')"
-                            
-#                             filtered_vendor_mappings.append(ImageVendorMapping(
-#                                 image_link=mapping["image_link"],
-#                                 vendor_id=vendor_id_str
-#                             ))
-#                         break
-        
-#         # Remove duplicates while preserving order
-#         unique_filtered_images = list(dict.fromkeys(filtered_images))
-        
-#         # Remove duplicate vendor mappings based on image_link
-#         seen_images = set()
-#         unique_vendor_mappings = []
-#         for mapping in filtered_vendor_mappings:
-#             if mapping.image_link not in seen_images:
-#                 unique_vendor_mappings.append(mapping)
-#                 seen_images.add(mapping.image_link)
-        
-#         logger.info(f"Found {len(unique_filtered_images)} unique {category} images for reference_id: {reference_id}")
-        
-#         return CategoryImagesResponse(
-#             reference_id=reference_id,
-#             category=category,
-#             #image_links=unique_filtered_images,
-#             vendor_mappings=unique_vendor_mappings,
-#             total_count=len(unique_filtered_images)
-#         )
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"Error filtering {category} images for reference_id '{reference_id}': {e}", exc_info=True)
-#         raise HTTPException(status_code=500, detail=f"Database error: {e}")
-
-# async def get_vision_board_images_by_category(reference_id: str, category: str) -> CategoryImagesResponse:
-#     """
-#     Get all image links from vision boards filtered by category (venue, decor, attire)
-#     Handles frontend-database category name mapping
-#     """
-    
-#     logger.info(f"Retrieving {category} images for reference_id: {reference_id}")
-    
-#     try:
-#         # Find all vision boards for the reference_id
-#         cursor = db[VISION_BOARD_COLLECTION].find(
-#             {"reference_id": reference_id},
-#             {"_id": 0, "boards": 1}
-#         )
-        
-#         board_docs = list(cursor)
-        
-#         if not board_docs:
-#             logger.warning(f"No vision boards found for reference_id '{reference_id}'")
-#             raise HTTPException(
-#                 status_code=404, 
-#                 detail="No vision boards found for this reference ID"
-#             )
-        
-#         # MODIFIED: Collect vendor mappings from all boards
-#         all_vendor_mappings = []
-        
-#         for doc in board_docs:
-#             boards = doc.get("boards", [])
-#             for board in boards:
-#                 vendor_mappings = board.get("vendor_mappings", [])
-#                 all_vendor_mappings.extend(vendor_mappings)
-        
-#         # UPDATED: Enhanced category keyword mapping for frontend-database mismatch
-#         category_keywords = {
-#             "venues": ["venues", "venue"],
-#             "fashion and attire": ["wedding_wear", "bridalWear"],
-#             "decors": ["decors", "decor"]
-#         }
-        
-#         keywords = category_keywords.get(category.lower(), [category.lower()])
-        
-#         # MODIFIED: Filter vendor mappings by category using image_link in vendor_mappings
-#         filtered_vendor_mappings = []
-        
-#         for mapping in all_vendor_mappings:
-#             image_link = mapping.get("image_link", "")
-            
-#             # Check if any of the category keywords appear in the image link
-#             if any(keyword.lower() in image_link.lower() for keyword in keywords):
-#                 vendor_id = mapping.get("vendor_id")
-                
-#                 # Convert vendor_id to string representation "ObjectId('...')"
-#                 if vendor_id:
-#                     if isinstance(vendor_id, ObjectId):
-#                         vendor_id_str = f"ObjectId('{str(vendor_id)}')"
-#                     else:
-#                         # If it's already a string, wrap it properly
-#                         vendor_id_str = f"ObjectId('{vendor_id}')"
-                    
-#                     filtered_vendor_mappings.append(VendorImage(
-#                         image_link=image_link,
-#                         vendor_id=vendor_id_str
-#                     ))
-        
-#         # Remove duplicate vendor mappings based on image_link
-#         seen_images = set()
-#         unique_vendor_mappings = []
-#         for mapping in filtered_vendor_mappings:
-#             if mapping.image_link not in seen_images:
-#                 unique_vendor_mappings.append(mapping)
-#                 seen_images.add(mapping.image_link)
-        
-#         logger.info(f"Found {len(unique_vendor_mappings)} unique {category} images for reference_id: {reference_id}")
-        
-#         return CategoryImagesResponse(
-#             reference_id=reference_id,
-#             category=category,
-#             vendor_mappings=unique_vendor_mappings,
-#             total_count=len(unique_vendor_mappings)
-#         )
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"Error filtering {category} images for reference_id '{reference_id}': {e}", exc_info=True)
-#         raise HTTPException(status_code=500, detail=f"Database error: {e}")
-
-
 async def get_vision_board_images_by_category(reference_id: str, category: str) -> CategoryImagesResponse:
     """
     Get all image links from vision boards filtered by category (venue, decor, attire)
@@ -650,10 +470,10 @@ async def get_vision_board_images_by_category(reference_id: str, category: str) 
     logger.info(f"Retrieving {category} images for reference_id: {reference_id}")
     
     try:
-        # Find all vision boards for the reference_id - MODIFIED: Include title field
+        # Find all vision boards for the reference_id - MODIFIED: Include title and location fields
         cursor = db[VISION_BOARD_COLLECTION].find(
             {"reference_id": reference_id},
-            {"_id": 0, "boards": 1, "title": 1}
+            {"_id": 0, "boards": 1, "title": 1, "location": 1}
         )
         
         board_docs = list(cursor)
@@ -665,17 +485,23 @@ async def get_vision_board_images_by_category(reference_id: str, category: str) 
                 detail="No vision boards found for this reference ID"
             )
         
-        # MODIFIED: Collect vendor mappings and titles from all boards
+        # MODIFIED: Collect vendor mappings, titles, and locations from all boards
         all_vendor_mappings = []
         vision_board_titles = []
+        locations = []
         
         for doc in board_docs:
             boards = doc.get("boards", [])
             title = doc.get("title", "")
+            location = doc.get("location", "")  # Fixed: Get location from doc level, not board level
             
             # Collect title if it exists
             if title:
                 vision_board_titles.append(title)
+            
+            # Collect location if it exists
+            if location:
+                locations.append(location)
             
             for board in boards:
                 vendor_mappings = board.get("vendor_mappings", [])
@@ -721,27 +547,33 @@ async def get_vision_board_images_by_category(reference_id: str, category: str) 
                 unique_vendor_mappings.append(mapping)
                 seen_images.add(mapping.image_link)
         
-        # MODIFIED: Get unique titles
+        # MODIFIED: Get unique titles and locations
         unique_titles = list(set(vision_board_titles)) if vision_board_titles else []
+        unique_locations = list(set(locations)) if locations else []
+        
+        # Get the primary location (first unique location or empty string)
+        primary_location = unique_locations[0] if unique_locations else ""
         
         logger.info(f"Found {len(unique_vendor_mappings)} unique {category} images for reference_id: {reference_id}")
         logger.info(f"Found {len(unique_titles)} vision board titles: {unique_titles}")
+        logger.info(f"Found locations: {unique_locations}")
         
-        # MODIFIED: Return response with titles included
+        # MODIFIED: Return response with location included
         return CategoryImagesResponse(
             reference_id=reference_id,
             category=category,
             vendor_mappings=unique_vendor_mappings,
             total_count=len(unique_vendor_mappings),
-            titles=unique_titles  # Added titles field
+            location=primary_location,  # Fixed: Use primary_location instead of undefined 'loc'
+            titles=unique_titles
         )
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error filtering {category} images for reference_id '{reference_id}': {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
-   
+        raise HTTPException
+    
 def get_category_regex(category: str) -> str:
     """
     Get regex pattern for category matching with broader keyword support
@@ -754,19 +586,22 @@ def get_category_regex(category: str) -> str:
     
     return category_patterns.get(category.lower(), category.lower()) 
 
+
+# UPDATED: Modified get_vision_board_images_by_event function to include location support
 async def get_vision_board_images_by_event(reference_id: str, event: str) -> EventImagesResponse:
     """
     Get all unique image links from vision boards filtered by event
     Extracts from vendor_mappings field when event is present in events field
+    Now includes location support
     """
     
     logger.info(f"Retrieving {event} images for reference_id: {reference_id}")
     
     try:
-        # Find all vision boards for the reference_id
+        # Find all vision boards for the reference_id - MODIFIED: Include location field
         cursor = db[VISION_BOARD_COLLECTION].find(
             {"reference_id": reference_id},
-            {"_id": 0, "boards": 1, "events": 1}
+            {"_id": 0, "boards": 1, "events": 1, "location": 1, "title": 1}
         )
         
         board_docs = list(cursor)
@@ -780,10 +615,20 @@ async def get_vision_board_images_by_event(reference_id: str, event: str) -> Eve
         
         # Collect vendor mappings from boards that contain the specified event
         all_vendor_mappings = []
+        locations = []
+        titles = []
         
         for doc in board_docs:
             # Check if the document has the specified event
             doc_events = doc.get("events", [])
+            location = doc.get("location", "")
+            title = doc.get("title", "")
+            
+            # Collect location and title
+            if location:
+                locations.append(location)
+            if title:
+                titles.append(title)
             
             # Handle different event name formats (case-insensitive matching)
             event_found = False
@@ -802,11 +647,18 @@ async def get_vision_board_images_by_event(reference_id: str, event: str) -> Eve
         
         if not all_vendor_mappings:
             logger.warning(f"No images found for event '{event}' in reference_id '{reference_id}'")
+            # MODIFIED: Include location and titles even when no images found
+            unique_locations = list(set(locations)) if locations else []
+            unique_titles = list(set(titles)) if titles else []
+            primary_location = unique_locations[0] if unique_locations else ""
+            
             return EventImagesResponse(
                 reference_id=reference_id,
                 event=event,
                 vendor_mappings=[],
-                total_count=0
+                total_count=0,
+                location=primary_location,
+                titles=unique_titles
             )
         
         # Convert vendor mappings to VendorImage objects and remove duplicates
@@ -828,17 +680,27 @@ async def get_vision_board_images_by_event(reference_id: str, event: str) -> Eve
                         vendor_id_str = str(vendor_id)
                     
                     vendor_images.append(VendorImage(
-                        image_link=image_link
+                        image_link=image_link,
+                        vendor_id=vendor_id_str
                     ))
                     seen_images.add(image_link)
         
+        # MODIFIED: Get unique locations and titles
+        unique_locations = list(set(locations)) if locations else []
+        unique_titles = list(set(titles)) if titles else []
+        primary_location = unique_locations[0] if unique_locations else ""
+        
         logger.info(f"Found {len(vendor_images)} unique {event} images for reference_id: {reference_id}")
+        logger.info(f"Found locations: {unique_locations}")
+        logger.info(f"Found titles: {unique_titles}")
         
         return EventImagesResponse(
             reference_id=reference_id,
             event=event,
             vendor_mappings=vendor_images,
-            total_count=len(vendor_images)
+            total_count=len(vendor_images),
+            location=primary_location,  # ADDED: location field
+            titles=unique_titles        # ADDED: titles field
         )
         
     except HTTPException:

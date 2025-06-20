@@ -15,6 +15,8 @@ class VendorItem(BaseModel):
     image_urls: Optional[List[str]] = Field(None, alias="Image URLs", description="List of vendor image URLs")
     
     city: Optional[str] = Field(None, alias="City", description="Vendor city location")
+
+    state: Optional[str] = Field(None, alias="State", description="Vendor's state location")
     
     # Handle ObjectId conversion (for backward compatibility)
     @field_validator('vendor_id', mode='before')
@@ -68,11 +70,13 @@ class VendorDetailsResponse(BaseModel):
     """Response model for detailed vendor information."""
     #success: bool = Field(True, description="Whether the request was successful")
     vendor: VendorDetails = Field(..., description="Complete vendor information")
+    reference_id: Optional[str] = Field(None, description="The unique reference ID of the vision board")
     
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
+                "reference_id": "WED_TEST123",
                 "vendor": {
                     "vendor_id": "507f1f77bcf86cd799439011",
                     "category_name": "venues",
@@ -107,6 +111,7 @@ class SelectedVendorInfo(BaseModel):
     image_urls: Optional[List[str]] = Field(None, description="List of image URLs for the selected vendor (optional)")
 
 class ExploreVendorsResponse(BaseModel):
+    reference_id: Optional[str] = Field(None, description="The unique reference ID of the vision board")
     category_name: str = Field(..., description="The vendor category being explored")
     location: str = Field(..., description="The wedding location from budget plan")
     vendors: List[VendorItem] = Field(..., description="List of vendors for current page")
@@ -120,20 +125,23 @@ class ExploreVendorsResponse(BaseModel):
             "example": {
                 "category_name": "venues",
                 "location": "Bengaluru",
+                "reference_id": "WED_TEST123",
                 "vendors": [
                     {
                         "vendor_id": "VEN_a1b2c3d4e5f6",
                         "title": "Galaxy Club",
                         "rating": 5.0,
                         "image_urls": ["https://example.com/image1.jpg"],
-                        "city": "Bengaluru"
+                        "city": "Bengaluru",
+                        "state": "Karnataka"
                     },
                     {
                         "vendor_id": "VEN_x7y8z9m3n4p5",
                         "title": "Royal Palace",
                         "rating": "Not Available",
                         "image_urls": None,
-                        "city": "Bengaluru"
+                        "city": "Bengaluru",
+                        "state": "Karnataka"
                     }
                 ],
                 "page": 1,

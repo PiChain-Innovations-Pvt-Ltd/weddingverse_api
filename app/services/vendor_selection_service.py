@@ -11,6 +11,47 @@ from app.config import settings
 
 BUDGET_PLANS_COLLECTION = settings.BUDGET_PLANS_COLLECTION 
 
+def normalize_image_url(url: str) -> str:
+    """
+    Normalize image URLs to use the correct storage domain.
+    Replaces 'https://storage.cloud.google.com' with 'https://storage.googleapis.com'
+    
+    Args:
+        url (str): The original image URL
+        
+    Returns:
+        str: The normalized image URL
+    """
+    if not url or not isinstance(url, str):
+        return url
+    
+    # Replace the incorrect domain with the correct one
+    normalized_url = url.replace(
+        "https://storage.cloud.google.com",
+        "https://storage.googleapis.com"
+    )
+    
+    # Log the replacement if it occurred
+    if normalized_url != url:
+        logger.info(f"Normalized URL: {url} -> {normalized_url}")
+    
+    return normalized_url
+
+def normalize_image_urls(image_urls: List[str]) -> List[str]:
+    """
+    Normalize a list of image URLs.
+    
+    Args:
+        image_urls (List[str]): List of image URLs
+        
+    Returns:
+        List[str]: List of normalized image URLs
+    """
+    if not image_urls:
+        return image_urls
+    
+    return [normalize_image_url(url) for url in image_urls if url]
+
 def get_category_to_collection_mapping() -> Dict[str, str]:
     """
     Maps category names to their corresponding database collection names.
@@ -178,17 +219,24 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_na
         if "rating" in field_map and field_map["rating"] in vendor_doc:
             vendor_rating = convert_rating_to_float(vendor_doc[field_map["rating"]])
 
-        # Extract all image URLs as a list
+        # Extract and normalize image URLs
         vendor_image_urls = []
         if "image_urls" in field_map and field_map["image_urls"] in vendor_doc:
             image_urls = vendor_doc[field_map["image_urls"]]
             if isinstance(image_urls, list):
-                vendor_image_urls = [url for url in image_urls if url and str(url).strip()]
+                # MODIFIED: Normalize URLs and filter out empty ones
+                vendor_image_urls = normalize_image_urls([url for url in image_urls if url and str(url).strip()])
             elif isinstance(image_urls, str) and image_urls.strip():
-                vendor_image_urls = [image_urls]
+                # MODIFIED: Normalize single URL
+                normalized_url = normalize_image_url(image_urls)
+                vendor_image_urls = [normalized_url]
 
         logger.info(f"Extracted vendor data: title='{vendor_title}', city='{vendor_city}', "
                    f"rating={vendor_rating}, image_urls={len(vendor_image_urls)} images")
+
+        # Log a sample of normalized URLs for verification
+        if vendor_image_urls:
+            logger.info(f"Sample normalized URLs: {vendor_image_urls[:3]}...")  # Show first 3 URLs
 
     except HTTPException as he:
         # Re-raise HTTP exceptions
@@ -218,7 +266,7 @@ def add_selected_vendor_to_plan(reference_id: str, category_name: str, vendor_na
             detail="Error validating existing budget plan data."
         )
 
-    # 5. Create the SelectedVendorInfo object with fetched data
+    # 5. Create the SelectedVendorInfo object with fetched data (URLs already normalized)
     selected_vendor_info = SelectedVendorInfo(
         category_name=category_name,
         title=vendor_title,

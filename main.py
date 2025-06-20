@@ -14,7 +14,8 @@ from app.routers import (
     vendor_discovery_router, 
     vendor_details_router,
     vendor_selection_router,
-    budget_retrieval_router
+    budget_retrieval_router,
+    vision_board_vendor_router
 )
 # Import the add vendor router separately
 from app.routers import add_your_vendor
@@ -84,6 +85,7 @@ app.include_router(vendor_discovery_router.router)  # Vendor discovery/explorati
 app.include_router(vendor_details_router.router)  # Vendor details for messaging
 app.include_router(add_your_vendor.router)  # Add vendor functionality
 app.include_router(vendor_selection_router.router)  # Vendor selection for budget
+app.include_router(vision_board_vendor_router.router) # Vendor listion for vision board
 
 @app.exception_handler(status.HTTP_401_UNAUTHORIZED)
 async def unauthorized_exception_handler(request: Request, exc):

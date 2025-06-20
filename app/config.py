@@ -101,7 +101,7 @@ except Exception as e:
     raise RuntimeError(f"Error decoding or constructing Google Application Credentials: {e}. Application cannot proceed.")
 
 
-print("→ loaded settings:", settings.dict(), flush=True)
+# print("→ loaded settings:", settings.dict(), flush=True)
 
 # Static field‐mapping for your vision‐board queries
 FIELD_MAP = {
