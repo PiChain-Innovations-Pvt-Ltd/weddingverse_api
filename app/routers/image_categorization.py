@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
-from typing import List
+from typing import List, Optional
 from app.services.image_categorization_services import categorize_and_match, categorize_bulk
 from app.utils.logger import logger
 from app.models.vision_board import VisionBoardResponse
@@ -17,15 +17,14 @@ router = APIRouter()
         502: {"description": "Upstream service failed"},
         500: {"description": "Internal Server Error"},
     },
-    # Remove the explicit API Key dependency here
-    # dependencies=[Depends(get_api_key)],
     response_model=VisionBoardResponse
 )
 async def categorize_endpoint(
     images:           List[UploadFile] = File(..., description="One or more images"),
     guest_experience: str              = Form(..., description="Guest experience"),
     events:           List[str]        = Form(default=[], description="Events list"),
-    reference_id:     str              = Form(..., description="User reference_id") 
+    reference_id:     str              = Form(..., description="User reference_id"),
+    location:         Optional[str]    = Form(None, description="Wedding location")  # ADDED: location parameter
 ):
 
     if not images:
@@ -46,7 +45,8 @@ async def categorize_endpoint(
                 content_types,
                 guest_experience,
                 events,
-                reference_id
+                reference_id,
+                location  # ADDED: Pass location parameter
             )
             return bulk_response
 
@@ -56,7 +56,8 @@ async def categorize_endpoint(
             content_types,
             guest_experience,
             events,
-            reference_id
+            reference_id,
+            location  # ADDED: Pass location parameter
         )
         return single_response
 

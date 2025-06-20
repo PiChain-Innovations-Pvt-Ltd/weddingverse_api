@@ -37,3 +37,7 @@ def require_jwt_auth(credentials: HTTPAuthorizationCredentials = Depends(securit
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
         )
+
+def get_bearer_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """Dependency to extract the raw bearer token."""
+    return credentials.credentials
